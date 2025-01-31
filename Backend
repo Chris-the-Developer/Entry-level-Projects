@@ -1,0 +1,59 @@
+import pandas as pd
+from datetime import datetime
+
+# Function to read Excel file
+def read_expense_data(file_path):
+    try:
+        # Read the Excel file
+        df = pd.read_excel(file_path)
+
+        # Validate columns
+        required_columns = {'Date', 'Category', 'Description', 'Amount'}
+        if not required_columns.issubset(df.columns):
+            raise ValueError(f"Excel file must contain the following columns: {required_columns}")
+
+        # Ensure date is properly formatted
+        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+        if df['Date'].isnull().any():
+            raise ValueError("Some dates are invalid. Please check the 'Date' column in your file.")
+
+        return df
+
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return None
+
+# Function to get a summary of expenses by category
+def summarize_expenses_by_category(df):
+    summary = df.groupby('Category')['Amount'].sum().reset_index()
+    summary = summary.sort_values(by='Amount', ascending=False)
+    return summary
+
+# Function to get a monthly expense breakdown
+def summarize_expenses_by_month(df):
+    df['Month'] = df['Date'].dt.to_period('M')
+    monthly_summary = df.groupby('Month')['Amount'].sum().reset_index()
+    monthly_summary['Month'] = monthly_summary['Month'].astype(str)  # Convert Period to string
+    return monthly_summary
+
+# Function to print summary
+def print_summary(df):
+    category_summary = summarize_expenses_by_category(df)
+    monthly_summary = summarize_expenses_by_month(df)
+
+    print("\nExpense Summary by Category:")
+    print(category_summary)
+
+    print("\nMonthly Expense Summary:")
+    print(monthly_summary)
+
+# Main function
+def main():
+    file_path = input("Enter the path to your expense Excel file: ")
+    df = read_expense_data(file_path)
+
+    if df is not None:
+        print_summary(df)
+
+if __name__ == "__main__":
+    main()
