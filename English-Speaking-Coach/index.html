@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>English Speaking Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Charis+SIL:wght@400;700&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap header-row">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <path class="bubble" d="M8 5h24a4 4 0 0 1 4 4v15a4 4 0 0 1-4 4H17l-7 6v-6H8a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4z"/>
+        <path class="wave" d="M12.5 14.5v5M17 11.5v11M21.5 13.5v7M26 15.5v3"/>
+      </svg>
+      <div>
+        <h1 class="brand-name">English Speaking Coach</h1>
+        <p class="brand-tag">Say it out loud, see what a listener heard, then fix it.</p>
+      </div>
+    </div>
+    <div class="settings">
+      <div class="segmented" role="radiogroup" aria-label="Accent">
+        <button type="button" role="radio" class="segment" id="accent-us" data-lang="en-US" aria-checked="true">American</button>
+        <button type="button" role="radio" class="segment" id="accent-gb" data-lang="en-GB" aria-checked="false">British</button>
+      </div>
+      <label class="voice-field" for="voice-select">
+        <span class="voice-label">Voice</span>
+        <select id="voice-select"><option value="">Automatic</option></select>
+      </label>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="tabs" role="tablist" aria-label="Practice mode">
+      <button type="button" role="tab" class="tab" id="tab-speak" aria-controls="view-speak" aria-selected="true">Speak</button>
+      <button type="button" role="tab" class="tab" id="tab-write" aria-controls="view-write" aria-selected="false" tabindex="-1">Write</button>
+      <button type="button" role="tab" class="tab" id="tab-progress" aria-controls="view-progress" aria-selected="false" tabindex="-1">Progress</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap main">
+  <!-- Speak: pronunciation practice -->
+  <section class="view" id="view-speak" role="tabpanel" aria-labelledby="tab-speak">
+    <p class="notice" id="speak-notice" hidden></p>
+    <div class="chips" id="sound-chips" role="group" aria-label="Sound to practice"></div>
+
+    <div class="speak-grid">
+      <div class="speak-main">
+        <article class="card practice-card">
+          <div class="card-top">
+            <p class="eyebrow"><span id="sound-name"></span> <span class="ipa" id="sound-ipa"></span></p>
+            <p class="counter" id="sentence-counter"></p>
+            <button type="button" class="link-btn" id="btn-library" hidden>Back to practice sentences</button>
+          </div>
+          <p class="sentence" id="sentence"></p>
+          <p class="hint">Tap any word to hear it on its own.</p>
+          <div class="controls">
+            <button type="button" class="btn" id="btn-listen"><span class="btn-icon" data-icon="speaker"></span>Listen</button>
+            <button type="button" class="btn" id="btn-slow"><span class="btn-icon" data-icon="slow"></span>Slowly</button>
+            <button type="button" class="btn btn-primary" id="btn-record" aria-pressed="false"><span class="btn-icon" data-icon="mic"></span><span class="btn-label">Record</span></button>
+            <button type="button" class="btn btn-quiet" id="btn-next">Next<span class="btn-icon" data-icon="next"></span></button>
+          </div>
+          <p class="status" id="speak-status" role="status"></p>
+          <div class="tip">
+            <h3 class="tip-title" id="tip-title"></h3>
+            <p class="tip-text" id="tip-text"></p>
+            <p class="tip-mistake" id="tip-mistake"></p>
+          </div>
+        </article>
+
+        <section class="card result-card" id="result" aria-live="polite" hidden></section>
+      </div>
+
+      <aside class="speak-side">
+        <section class="panel">
+          <h2 class="panel-title">Practice your own sentence</h2>
+          <form class="custom-form" id="custom-form">
+            <label class="field-label" for="custom-input">Type anything you want to say</label>
+            <textarea id="custom-input" rows="3" maxlength="300" placeholder="For example: I'd like to book a table for two."></textarea>
+            <button type="submit" class="btn">Practice this</button>
+          </form>
+        </section>
+        <section class="panel">
+          <h2 class="panel-title">Words to practice</h2>
+          <div id="weak-side"></div>
+        </section>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Write: punctuation and grammar check -->
+  <section class="view" id="view-write" role="tabpanel" aria-labelledby="tab-write" hidden>
+    <div class="write-grid">
+      <div class="card editor-card">
+        <div class="editor-head">
+          <label class="field-label" for="write-input">Your writing</label>
+          <span class="tag" id="example-tag" hidden>Example text</span>
+        </div>
+        <textarea id="write-input" rows="9" maxlength="5000"></textarea>
+        <div class="controls">
+          <button type="button" class="btn btn-primary" id="btn-check"><span class="btn-icon" data-icon="check"></span>Check my writing</button>
+          <button type="button" class="btn" id="btn-dictate" aria-pressed="false"><span class="btn-icon" data-icon="mic"></span><span class="btn-label">Dictate</span></button>
+          <button type="button" class="btn" id="btn-read"><span class="btn-icon" data-icon="speaker"></span>Read aloud</button>
+        </div>
+        <label class="option" id="online-option" for="online-check">
+          <input type="checkbox" id="online-check">
+          <span>
+            <span class="option-label" id="online-label">Also check grammar online with LanguageTool</span>
+            <span class="option-note" id="online-note">This sends your text to languagetool.org.</span>
+          </span>
+        </label>
+        <p class="status" id="write-status" role="status"></p>
+      </div>
+
+      <section class="card results-card" id="results-card" aria-labelledby="results-title">
+        <div class="results-head">
+          <h2 class="results-title" id="results-title">Corrections</h2>
+          <button type="button" class="btn btn-small" id="btn-fix-all" hidden>Fix all</button>
+        </div>
+        <div class="summary" id="results-summary"></div>
+        <p class="stale" id="results-stale" hidden>You changed the text. Press “Check my writing” to update the corrections.</p>
+        <div class="marked" id="marked-text"></div>
+        <ol class="issues" id="issue-list"></ol>
+      </section>
+    </div>
+
+    <section class="guide" aria-labelledby="guide-title">
+      <div class="guide-head">
+        <h2 class="section-title" id="guide-title">Punctuation guide</h2>
+        <p class="section-sub">Punctuation changes how a sentence sounds when you read it aloud. Press Hear to listen.</p>
+      </div>
+      <div class="guide-grid">
+        <article class="guide-card">
+          <p class="guide-mark" aria-hidden="true">.</p>
+          <h3 class="guide-name">Period <span class="alt-name">(full stop)</span></h3>
+          <p>Ends a statement.</p>
+          <p class="guide-example">I live in Lisbon.</p>
+          <p class="guide-sound">Your voice goes down, then you pause.</p>
+          <button type="button" class="btn btn-small" data-say="I live in Lisbon.">Hear</button>
+        </article>
+        <article class="guide-card">
+          <p class="guide-mark" aria-hidden="true">,</p>
+          <h3 class="guide-name">Comma</h3>
+          <p>Separates items in a list, and opening words like “However”.</p>
+          <p class="guide-example">However, I was late.</p>
+          <p class="guide-sound">A short pause.</p>
+          <button type="button" class="btn btn-small" data-say="However, I was late.">Hear</button>
+        </article>
+        <article class="guide-card">
+          <p class="guide-mark" aria-hidden="true">?</p>
+          <h3 class="guide-name">Question mark</h3>
+          <p>Ends a direct question.</p>
+          <p class="guide-example">Do you live here?</p>
+          <p class="guide-sound">Yes/no questions usually go up at the end. Questions with what, where or why usually go down.</p>
+          <button type="button" class="btn btn-small" data-say="Do you live here? Where do you live?">Hear</button>
+        </article>
+        <article class="guide-card">
+          <p class="guide-mark" aria-hidden="true">!</p>
+          <h3 class="guide-name">Exclamation mark</h3>
+          <p>Shows strong feeling. One is enough.</p>
+          <p class="guide-example">That's amazing!</p>
+          <p class="guide-sound">Say it with more energy.</p>
+          <button type="button" class="btn btn-small" data-say="That's amazing!">Hear</button>
+        </article>
+        <article class="guide-card">
+          <p class="guide-mark" aria-hidden="true">'</p>
+          <h3 class="guide-name">Apostrophe</h3>
+          <p>Shows missing letters (don't = do not) or that something belongs to someone (Anna's bag). Never use it for plurals: apples, not apple's.</p>
+          <p class="guide-example">Don't touch Anna's bag.</p>
+          <p class="guide-sound">You don't hear it, so check it when you write.</p>
+          <button type="button" class="btn btn-small" data-say="Don't touch Anna's bag.">Hear</button>
+        </article>
+        <article class="guide-card">
+          <p class="guide-mark" aria-hidden="true">:</p>
+          <h3 class="guide-name">Colon</h3>
+          <p>Introduces a list or an explanation.</p>
+          <p class="guide-example">You need three things: a pen, paper and time.</p>
+          <p class="guide-sound">A pause that says “here it comes”.</p>
+          <button type="button" class="btn btn-small" data-say="You need three things: a pen, paper and time.">Hear</button>
+        </article>
+        <article class="guide-card">
+          <p class="guide-mark" aria-hidden="true">;</p>
+          <h3 class="guide-name">Semicolon</h3>
+          <p>Joins two complete sentences that are closely connected.</p>
+          <p class="guide-example">It was late; we went home.</p>
+          <p class="guide-sound">A pause, longer than a comma.</p>
+          <button type="button" class="btn btn-small" data-say="It was late; we went home.">Hear</button>
+        </article>
+        <article class="guide-card">
+          <p class="guide-mark" aria-hidden="true">“ ”</p>
+          <h3 class="guide-name">Quotation marks</h3>
+          <p>Show the exact words someone said.</p>
+          <p class="guide-example">She said, “I'm tired.”</p>
+          <p class="guide-sound">Change your voice a little for the quote.</p>
+          <button type="button" class="btn btn-small" data-say="She said, I'm tired.">Hear</button>
+        </article>
+      </div>
+    </section>
+  </section>
+
+  <!-- Progress -->
+  <section class="view" id="view-progress" role="tabpanel" aria-labelledby="tab-progress" hidden>
+    <div class="stats">
+      <div class="stat"><p class="stat-value" id="stat-total">0</p><p class="stat-label">Sentences practiced</p></div>
+      <div class="stat"><p class="stat-value" id="stat-average">–</p><p class="stat-label">Average clarity, last 10</p></div>
+      <div class="stat"><p class="stat-value" id="stat-fixed">0</p><p class="stat-label">Hard words you fixed</p></div>
+      <div class="stat"><p class="stat-value" id="stat-checks">0</p><p class="stat-label">Writing checks</p></div>
+    </div>
+    <div class="progress-grid">
+      <section class="card">
+        <h2 class="panel-title">Words to practice</h2>
+        <p class="section-sub">Tap a word to practice it. Say it clearly twice in a row and it leaves the list.</p>
+        <div id="weak-full"></div>
+      </section>
+      <section class="card">
+        <h2 class="panel-title">Recent practice</h2>
+        <div class="table-wrap" id="history"></div>
+      </section>
+    </div>
+    <div class="clear-row">
+      <button type="button" class="btn btn-small btn-quiet" id="btn-clear">Clear my progress</button>
+      <p class="section-sub">Your progress is saved in this browser only.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap site-footer">
+  <p>Your browser turns your speech into text. Chrome and Edge send the audio to Google to do this, and Safari uses Apple's service. The coach compares the words it heard with the sentence, so it shows whether you were understood. It can't grade your accent, word stress or intonation.</p>
+</footer>
+
+<script src="sentences.js"></script>
+<script src="compare.js"></script>
+<script src="checker.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
