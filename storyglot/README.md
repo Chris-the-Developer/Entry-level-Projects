@@ -63,21 +63,56 @@ month). With Azure the sentence is highlighted but not the individual word.
 
 Not included: automatic podcast transcription.
 
-## Put it on your tablet
+## Run it as your own app on Azure (recommended)
 
-The app is a single page (`index.html`). Pick whichever is easiest:
+`server.js` turns Storyglot into a hosted app: it serves the app, keeps your DeepSeek and Azure
+Speech keys on the server (the tablet never sees them, and there are no browser connection
+problems), saves your progress on the server with a backup for each of the last 7 days, and tries to
+fetch YouTube transcripts for you. It has no dependencies and needs Node 18 or newer.
 
-1. **GitHub Pages (recommended — installable and offline).**
-   In this repository: *Settings → Pages → Deploy from a branch*, choose the branch that contains
-   this folder and `/ (root)`. Then open
-   `https://<your-user>.github.io/Entry-level-Projects/storyglot/` on the tablet and use
-   *Add to Home screen* (Chrome: ⋮ menu; iPad Safari: Share button). After the first visit it opens
-   without a connection.
-2. **From a computer on the same Wi-Fi.** Run `python3 -m http.server 8000` inside this folder and
-   open `http://<computer-ip>:8000` on the tablet. (Offline install needs HTTPS, so this only works
-   while the computer is serving.)
-3. **Just the file.** Copy `index.html` to an Android tablet and open it with Chrome. Depending on
-   the browser, progress may not be saved in this mode — the app warns you if so.
+1. **Create the web app.** Azure portal → *Create a resource* → *Web App*. Publish: *Code*,
+   runtime stack: *Node 22 LTS* (or 20), operating system: *Linux*, plan: *Free F1* is enough to
+   start (it sleeps when unused, so the first page load can take a while; *Basic B1* avoids that).
+2. **Add the settings.** In the web app: *Settings → Environment variables → App settings*, add
+   and apply:
+
+   | Name | Value |
+   | --- | --- |
+   | `APP_PASSWORD` | a password of your choice — the tablet asks for it once |
+   | `DEEPSEEK_API_KEY` | your DeepSeek key |
+   | `AZURE_SPEECH_KEY` | key of an Azure *Speech* resource (optional, for neural voices) |
+   | `AZURE_SPEECH_REGION` | that resource's region, e.g. `westeurope` |
+
+   Without `APP_PASSWORD` the hosted app stays locked, so nobody else can spend your keys.
+3. **Deploy the code.** In the web app: *Deployment → Deployment Center*, source *GitHub*, sign in,
+   pick this repository and the branch that contains `storyglot/`, and save. Azure adds a workflow
+   to the repository and deploys on every push. The `package.json` in the repository root tells
+   Azure to start `storyglot/server.js`.
+4. **Install it on the tablet.** Open `https://<your-app-name>.azurewebsites.net` in Chrome, enter
+   the password, then ⋮ → *Add to Home screen* / *Install app*. It now opens like any other app,
+   also without a connection (changes made offline are uploaded later).
+
+Progress is stored in `/home/storyglot-data` on the web app, which survives restarts and
+redeployments. Sign in from another device with the same password and it picks up the same
+progress; if two devices changed things while apart, the most recent one wins.
+
+YouTube: with the server, paste only the video link and leave the text empty. YouTube frequently
+refuses requests from cloud servers; when it does, the app says so and you paste the transcript.
+
+To try the server on a computer instead: `node storyglot/server.js`, then open
+`http://<computer-ip>:8080` on the tablet (set the same variables in the shell first if you want
+AI and Azure voices).
+
+## Other ways to put it on your tablet
+
+Without the server the app still works, with keys entered in Settings and progress kept only in
+the tablet's browser:
+
+1. **GitHub Pages.** *Settings → Pages → Deploy from a branch*, choose the branch that contains
+   this folder and `/ (root)`, then open
+   `https://<your-user>.github.io/Entry-level-Projects/storyglot/` and *Add to Home screen*.
+2. **Just the file.** Copy `index.html` to the tablet and open it with Chrome. Depending on the
+   browser, progress may not be saved in this mode — the app warns you if so.
 
 ## What needs internet
 

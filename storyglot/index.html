@@ -194,10 +194,10 @@ const num = n => Math.round(n).toLocaleString();
 const DEFAULTS = () => ({
   settings: {native:'en', target:'', rate:0.9, voice:'', provider:'auto', email:'', ltUrl:'', ltKey:'', goal:1000, font:22, theme:'auto', autoKnown:true,
     dsKey:'', dsUrl:'https://api.deepseek.com', dsModel:'deepseek-chat', storyLevel:'', tts:'device', azKey:'', azRegion:'', azVoice:{}},
-  lessons: [], words: {}, cache: {}, stats: {days: {}}, tutor: {msgs: [], scene: 'free'}
+  lessons: [], words: {}, cache: {}, stats: {days: {}}, tutor: {msgs: [], scene: 'free'}, sync: {rev: 0, dirty: false, mtime: 0}
 });
 let S = DEFAULTS(), memOnly = false, saveTimer = 0, idb = null;
-const merge = d => { const def = DEFAULTS(); return {...def, ...d, settings: {...def.settings, ...d.settings}, stats: {days: {}, ...d.stats}}; };
+const merge = d => { const def = DEFAULTS(); return {...def, ...d, settings: {...def.settings, ...d.settings}, stats: {days: {}, ...d.stats}, tutor: {...def.tutor, ...d.tutor}, sync: {...def.sync, ...d.sync}}; };
 function idbOpen() {
   return new Promise((res, rej) => {
     const r = indexedDB.open('storyglot', 1);
@@ -214,15 +214,87 @@ async function load() {
   if (!d) { try { const raw = localStorage.getItem(KEY); if (raw) d = JSON.parse(raw); } catch (e) { if (!idb) memOnly = true; } }
   if (d) S = merge(d);
 }
-function saveNow() {
-  clearTimeout(saveTimer); saveTimer = 0;
+function persist() {                                    // write to this device only
   if (idb) { idbPut(KEY, S).catch(() => toast('Could not save on this device. Export a backup from Settings.')); return; }
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
-  catch (e) { if (!memOnly) { memOnly = true; toast('Could not save on this device. Export a backup from Settings.'); } }
+  catch (e) { if (!memOnly && !(SV.on && SV.authed)) { memOnly = true; toast('Could not save on this device. Export a backup from Settings.'); } }
+}
+function saveNow() {
+  clearTimeout(saveTimer); saveTimer = 0;
+  S.sync.mtime = Date.now(); S.sync.dirty = true;
+  persist(); schedulePush();
 }
 function save() { if (!saveTimer) saveTimer = setTimeout(saveNow, 400); }
 addEventListener('pagehide', () => { if (saveTimer) saveNow(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) saveNow(); });
+
+/* ---------------- Storyglot server (optional): holds the keys, saves progress, fetches transcripts ---------------- */
+const SV = {on: false, authed: false, need: false, locked: false, ai: false, azure: false, pw: '', pushing: false, timer: 0, last: 0, err: ''};
+const lsGet = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const api = (path, opt = {}) => fetch('api/' + path, {cache: 'no-store', ...opt, headers: {...(opt.headers || {}), 'X-App-Password': SV.pw}});
+const apiError = async r => { const j = await r.json().catch(() => ({})); return new Error((j.error && (j.error.message || j.error)) || 'Server error ' + r.status); };
+async function connect() {
+  if (!location.protocol.startsWith('http')) return;
+  try {
+    const r = await fetch('api/config', {cache: 'no-store', signal: AbortSignal.timeout(8000)});
+    if (!r.ok) return;                                    // plain static hosting: no server features
+    const c = await r.json(); if (!c.server) return;
+    Object.assign(SV, {on: true, need: c.needPassword, locked: c.locked, ai: c.ai, azure: c.azure});
+    lsSet('storyglot.sv', JSON.stringify(c));
+  } catch (e) {                                           // offline: keep working from this device's copy
+    try { const c = JSON.parse(lsGet('storyglot.sv')); Object.assign(SV, {on: true, need: c.needPassword, ai: c.ai, azure: c.azure, authed: true, err: 'offline'}); } catch (e2) {}
+    SV.pw = lsGet('storyglot.pw'); return;
+  }
+  if (SV.locked) return;
+  SV.pw = lsGet('storyglot.pw');
+  if (SV.need) { try { if (!SV.pw || !(await api('login', {method: 'POST'})).ok) return; } catch (e) { return; } }
+  SV.authed = true;
+  await pull();
+}
+const forServer = () => ({...S, settings: {...S.settings, dsKey: '', azKey: '', ltKey: ''}});   // keys never leave the device
+function adopt(state, rev) {
+  const {dsKey, azKey, ltKey} = S.settings;
+  S = merge(state); Object.assign(S.settings, {dsKey, azKey, ltKey});
+  S.sync = {rev, dirty: false, mtime: (state.sync && state.sync.mtime) || 0};
+  persist(); applyTheme();
+  if (view === 'reader' && !cur()) view = 'home';
+}
+function settle(server) {                                 // this device and the server both changed: the newer one wins
+  if (server.state && ((server.state.sync && server.state.sync.mtime) || 0) > S.sync.mtime) { adopt(server.state, server.rev); toast('Loaded newer progress from your server.'); render(); }
+  else { S.sync.rev = server.rev; S.sync.dirty = true; schedulePush(100); }
+}
+async function pull() {
+  if (!SV.on || !SV.authed) return;
+  try {
+    const r = await api('state'); if (r.status === 401) { SV.authed = false; return; } if (!r.ok) throw 0;
+    const j = await r.json(); SV.err = '';
+    if (!j.state) { S.sync.rev = j.rev; if (S.settings.target) { S.sync.dirty = true; schedulePush(100); } }
+    else if (j.rev === S.sync.rev) { if (S.sync.dirty) schedulePush(100); else SV.last = Date.now(); }
+    else if (!S.sync.dirty) { adopt(j.state, j.rev); SV.last = Date.now(); }
+    else settle(j);
+  } catch (e) { SV.err = 'offline'; }
+}
+function schedulePush(ms = 4000) { if (!SV.on || !SV.authed) return; clearTimeout(SV.timer); SV.timer = setTimeout(push, ms); }
+async function push() {
+  if (!SV.on || !SV.authed || !S.sync.dirty) return;
+  if (SV.pushing) return schedulePush(2000);
+  SV.pushing = true; const sent = S.sync.mtime;
+  try {
+    const r = await api('state', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({baseRev: S.sync.rev, state: forServer()})});
+    if (r.ok) { S.sync.rev = (await r.json()).rev; if (S.sync.mtime === sent) S.sync.dirty = false; SV.last = Date.now(); SV.err = ''; persist(); }
+    else if (r.status === 409) settle(await r.json());
+    else if (r.status === 401) SV.authed = false;
+    else SV.err = 'Server error ' + r.status;
+  } catch (e) { SV.err = 'offline'; }
+  SV.pushing = false;
+  if (S.sync.dirty && !SV.err && SV.authed) schedulePush(1000);
+  const el = $('#sync-state'); if (el) el.textContent = syncText();
+}
+const syncText = () => !SV.authed ? 'Not signed in' : SV.err === 'offline' ? 'Offline — changes are kept on this tablet and uploaded when you are back online.'
+  : SV.err ? SV.err : S.sync.dirty ? 'Saving…' : SV.last ? 'All progress saved to your server at ' + new Date(SV.last).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + '.' : 'Connected.';
+document.addEventListener('visibilitychange', () => { if (!document.hidden && SV.on && SV.authed) (S.sync.dirty ? push() : pull().then(() => { if (view !== 'reader' && view !== 'tutor' && view !== 'add') render(); })); });
+addEventListener('online', () => { if (SV.on) { SV.err = ''; SV.authed ? push() : 0; } });
 
 // word entry: s = 0 seen only, 1 new, 2 familiar, 3 known, 4 mastered, 5 ignored; 1-3 have a flashcard
 const dict = lang => (S.words[lang] ||= {});
@@ -345,9 +417,19 @@ async function libre(text, from, to) {
   return j.translatedText;
 }
 /* ---------------- AI (DeepSeek, OpenAI-compatible; the key stays on this device) ---------------- */
-const hasAI = () => !!S.settings.dsKey;
+const hasAI = () => !!S.settings.dsKey || (SV.on && SV.ai);
 async function ai(messages, {json = false, temp = 1, max = 2000} = {}) {
   const s = S.settings;
+  if (SV.on && SV.ai) {                                   // the server holds the key
+    let r;
+    try { r = await api('ai', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({messages, temperature: temp, max_tokens: max, ...(json ? {response_format: {type: 'json_object'}} : {})})}); }
+    catch (e) { throw new Error('You are offline — the AI needs an internet connection.'); }
+    if (r.status === 401) { SV.authed = false; throw new Error('Please sign in again.'); }
+    if (!r.ok) throw new Error(r.status === 402 ? 'Your DeepSeek balance is empty.' : r.status === 429 ? 'The AI service is busy — try again in a moment.' : 'AI: ' + (await apiError(r)).message);
+    const j = await r.json().catch(() => ({})), out = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+    if (!out) throw new Error('The AI returned an empty answer.');
+    return out.trim();
+  }
   if (!s.dsKey) throw new Error('Add your DeepSeek API key in Settings first.');
   const base = (s.dsUrl || 'https://api.deepseek.com').trim().replace(/\/+$/, '');
   let r;
@@ -400,13 +482,15 @@ const P = {i: 0, playing: false, tok: 0, repeat: false, t0: 0, u: null};
 // Optional Azure neural voices (the user's own Speech key); audio is fetched per sentence and cached for the session.
 const AUD = new Audio(), azCache = new Map(), azVoices = {all: null};
 const SILENT = 'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
-const useAzure = () => S.settings.tts === 'azure' && !!S.settings.azKey && !!S.settings.azRegion;
+const azServer = () => SV.on && SV.azure;
+const useAzure = () => S.settings.tts === 'azure' && (azServer() || (!!S.settings.azKey && !!S.settings.azRegion));
 const azHost = () => `https://${S.settings.azRegion.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}.tts.speech.microsoft.com/cognitiveservices`;
 async function azVoiceList(lang) {
   if (!azVoices.all) {
     let r;
-    try { r = await fetch(azHost() + '/voices/list', {headers: {'Ocp-Apim-Subscription-Key': S.settings.azKey}}); }
+    try { r = azServer() ? await api('tts/voices') : await fetch(azHost() + '/voices/list', {headers: {'Ocp-Apim-Subscription-Key': S.settings.azKey}}); }
     catch (e) { throw new Error('Could not reach Azure Speech — check the region and your connection.'); }
+    if (!r.ok && azServer()) throw await apiError(r);
     if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Azure rejected the Speech key or region.' : 'Azure Speech error ' + r.status + '.');
     azVoices.all = await r.json();
   }
@@ -419,10 +503,12 @@ async function azFetch(text, lang) {
   if (azCache.has(k)) return azCache.get(k);
   let r;
   try {
-    r = await fetch(azHost() + '/v1', {method: 'POST',
+    r = azServer() ? await api('tts', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text, voice: v.ShortName, locale: v.Locale})})
+    : await fetch(azHost() + '/v1', {method: 'POST',
       headers: {'Ocp-Apim-Subscription-Key': S.settings.azKey, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3'},
       body: `<speak version="1.0" xml:lang="${v.Locale}"><voice name="${v.ShortName}">${esc(text)}</voice></speak>`});
   } catch (e) { throw new Error('Could not reach Azure Speech.'); }
+  if (!r.ok && azServer()) throw await apiError(r);
   if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Azure rejected the Speech key or region.' : r.status === 429 ? 'Azure Speech quota reached.' : 'Azure Speech error ' + r.status + '.');
   const url = URL.createObjectURL(await r.blob());
   if (azCache.size > 300) { const [k0, u0] = azCache.entries().next().value; URL.revokeObjectURL(u0); azCache.delete(k0); }
@@ -600,7 +686,7 @@ const TABS = [['home', 'Home'], ['library', 'Library'], ['tutor', 'Tutor'], ['re
 const TAB_OF = {add: 'library', story: 'library', words: 'review'};
 function drawTabs() {
   const el = $('#tabs');
-  el.hidden = view === 'reader' || view === 'welcome';
+  el.hidden = view === 'reader' || view === 'welcome' || view === 'login';
   document.body.classList.toggle('nav', !el.hidden);
   if (el.hidden) return;
   const due = counts(S.settings.target).due, on = TAB_OF[view] || view;
@@ -609,16 +695,24 @@ function drawTabs() {
 }
 function render() {
   if (!S.settings.target) view = 'welcome';
+  if (SV.on && !SV.authed) view = 'login';
   const m = $('#main');
   $('#player').hidden = view !== 'reader';
   m.innerHTML = (memOnly ? '<div class="banner">Storage is not available in this browser mode, so progress will be lost when you close the page. Open the app from a web address (see README) or export a backup in Settings.</div>' : '') +
-    ({welcome: vWelcome, home: vHome, library: vLibrary, add: vAdd, reader: vReader, story: vStory, tutor: vTutor, review: vReview, words: vWords, stats: vStats, settings: vSettings}[view])();
+    ({login: vLogin, welcome: vWelcome, home: vHome, library: vLibrary, add: vAdd, reader: vReader, story: vStory, tutor: vTutor, review: vReview, words: vWords, stats: vStats, settings: vSettings}[view])();
   drawTabs(); syncVideo();
   if (view === 'reader') { drawPlayer(); applyFont(); }
   if (view === 'review' && RV.active && RV.mode === 'listen' && !RV.shown && RV.queue.length) speak(RV.queue[0], S.settings.target, {rate: Math.min(S.settings.rate, 0.9)});
 }
 const langOptions = sel => LANGS.map(l => `<option value="${l[0]}" ${l[0] === sel ? 'selected' : ''}>${l[1]}</option>`).join('');
 
+function vLogin() {
+  return `<div class="card" style="margin-top:8vh"><h1 style="margin-bottom:8px">Storyglot</h1>
+    ${SV.locked ? '<p class="muted">This server has no password yet. In the Azure portal open your App Service → Settings → Environment variables, add <b>APP_PASSWORD</b>, save, and reload this page.</p>'
+    : `<p class="muted">Enter the password you set for your Storyglot server (APP_PASSWORD).</p>
+    <label class="f">Password<input id="l-pw" type="password" autocomplete="current-password"></label>
+    <button class="btn primary" data-a="login">Sign in</button>`}</div>`;
+}
 function vWelcome() {
   const guess = (navigator.language || 'en').slice(0, 2).toLowerCase();
   const nat = LANGS.some(l => l[0] === guess) ? guess : 'en';
@@ -680,13 +774,14 @@ function vAdd() {
       <button data-a="addMode" data-n="" class="${A.native ? '' : 'on'}">My text is already in ${esc(t)}</button></div>
     <label class="f">Title<input id="a-title" maxlength="120" placeholder="Optional" value="${esc(A.title)}"></label>
     ${A.native ? '' : `<label class="f">YouTube link (optional)<input id="a-yt" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" value="${esc(A.yt)}"></label>
-    <p class="muted" style="margin-top:-6px">For a video, paste its transcript below: on youtube.com open the video description, choose “Show transcript”, then select and copy the lines. Keep the timestamps — they sync the text with the video.</p>`}
+    <p class="muted" style="margin-top:-6px">${SV.on ? 'Leave the text empty and the transcript is fetched for you. If YouTube refuses, paste it yourself: ' : 'For a video, paste its transcript below: '} on youtube.com open the video description, choose “Show transcript”, then select and copy the lines. Keep the timestamps — they sync the text with the video.</p>`}
     <label class="f">Text<textarea id="a-text" placeholder="Paste or type your text here…">${esc(A.text)}</textarea></label>
     <div class="row">
       <button class="btn primary" data-a="create" ${A.busy ? 'disabled' : ''}>${A.native ? 'Translate &amp; create lesson' : 'Create lesson'}</button>
       <label class="btn" style="display:inline-flex;align-items:center">Open a file (.txt, .epub, .srt, .vtt)<input type="file" id="a-file" accept=".txt,.epub,.srt,.vtt,text/plain,application/epub+zip" hidden></label>
     </div>
-    ${A.busy ? `<div style="margin-top:14px"><progress max="${A.total}" value="${A.done}"></progress>
+    ${A.busy && !A.native ? '<p class="muted">Fetching the transcript…</p>' : ''}
+    ${A.busy && A.native ? `<div style="margin-top:14px"><progress max="${A.total}" value="${A.done}"></progress>
       <div class="row muted"><span id="a-prog">Translating sentence ${A.done} of ${A.total}…</span> <button class="btn" data-a="cancelCreate">Cancel</button></div></div>` : ''}
     <p class="muted" style="margin-bottom:0">${A.native ? 'Translation needs an internet connection. Your text is sent to the translation service chosen in Settings.' : 'Works fully offline — translations are only fetched when you ask for them. Long texts and books are split into chapters.'}</p>
   </div>`;
@@ -873,9 +968,20 @@ async function createLesson() {
   if (A.busy) return;
   const title = $('#a-title').value.trim(), text = $('#a-text').value.trim();
   A.title = title; A.text = text; A.yt = ($('#a-yt') || {}).value || '';
-  if (!text) { toast('Paste some text first.'); return; }
   const {native, target} = S.settings, extra = {};
   let sents;
+  if (!A.native && !text && ytId(A.yt) && SV.on) {        // let the server fetch the video's transcript
+    A.busy = true; render();
+    try {
+      const r = await api('youtube?id=' + ytId(A.yt) + '&lang=' + target);
+      if (!r.ok) throw await apiError(r);
+      const j = await r.json();
+      const vid = ytId(A.yt); A.busy = false; A.title = A.text = A.yt = '';
+      if (j.lang && !j.lang.toLowerCase().startsWith(pre(target)) && !j.lang.toLowerCase().startsWith(target)) toast(`This video only has captions in “${j.lang}”, not ${langName(target)}.`);
+      return addLessons(title || j.title, cuesToSents(j.cues, target), {yt: vid});
+    } catch (e) { A.busy = false; if (view === 'add') render(); toast(e.message); return; }
+  }
+  if (!text) { toast('Paste some text first.'); return; }
   if (!A.native) {
     const id = ytId(A.yt), cues = parseCues(text);
     if (A.yt.trim() && !id) { toast('That does not look like a YouTube link.'); return; }
@@ -1025,28 +1131,31 @@ function vStats() {
 function vSettings() {
   const s = S.settings, vs = voicesFor(s.target);
   return `<div class="top"><h1>Settings</h1></div>
+  ${SV.on ? `<div class="card"><h2>Your Storyglot server</h2><p class="muted" id="sync-state" style="margin-top:0">${esc(syncText())}</p>
+    <p class="muted">AI: ${SV.ai ? 'ready' : 'not set up (add DEEPSEEK_API_KEY on the server)'} · Azure voices: ${SV.azure ? 'ready' : 'not set up (add AZURE_SPEECH_KEY and AZURE_SPEECH_REGION)'}</p>
+    <div class="row"><button class="btn" data-a="syncNow">Sync now</button>${SV.need ? '<button class="btn" data-a="logout">Sign out</button>' : ''}</div></div>` : ''}
   <div class="card"><h2>Languages</h2>
     <label class="f">I speak<select id="s-native">${langOptions(s.native)}</select></label>
     <label class="f">I am learning<select id="s-target">${langOptions(s.target)}</select></label>
     <label class="f">Daily goal (words read + listened)<input id="s-goal" type="number" min="50" max="50000" step="50" value="${s.goal}"></label>
     <label class="chk"><input type="checkbox" id="s-auto" ${s.autoKnown ? 'checked' : ''}><span>When I mark a text as read, count the words I did not tap as known</span></label>
     <label class="f">Appearance<select id="s-theme">${[['auto', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([v, n]) => `<option value="${v}" ${s.theme === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
-  <div class="card"><h2>AI — stories, tutor, explanations</h2>
+  ${SV.on && SV.ai ? '' : `<div class="card"><h2>AI — stories, tutor, explanations</h2>
     <label class="f">DeepSeek API key<input id="s-dskey" type="password" value="${esc(s.dsKey)}" placeholder="sk-…" autocomplete="off"></label>
     <label class="f">Model<input id="s-dsmodel" value="${esc(s.dsModel)}"></label>
     <label class="f">Service address (change only if you use a relay)<input id="s-dsurl" value="${esc(s.dsUrl)}"></label>
     <div class="row"><button class="btn" data-a="testAI">Test key</button></div>
-    <p class="muted" style="margin-bottom:0">The key is stored only on this device and is sent only to the address above. It is left out of backups. Usage is billed to your DeepSeek account.</p></div>
+    <p class="muted" style="margin-bottom:0">The key is stored only on this device and is sent only to the address above. It is left out of backups. Usage is billed to your DeepSeek account.</p></div>`}
   <div class="card"><h2>Voice</h2>
     <label class="f">Voice source<select id="s-tts">
       <option value="device" ${s.tts === 'device' ? 'selected' : ''}>This tablet's built-in voices (free, works offline)</option>
-      <option value="azure" ${s.tts === 'azure' ? 'selected' : ''}>Azure neural voices (online, your Azure Speech key)</option></select></label>
-    ${s.tts === 'azure' ? `
+      <option value="azure" ${s.tts === 'azure' ? 'selected' : ''}>Azure neural voices (online${azServer() ? ', through your server' : ', your Azure Speech key'})</option></select></label>
+    ${s.tts === 'azure' ? `${azServer() ? '' : `
     <label class="f">Azure Speech key<input id="s-azkey" type="password" value="${esc(s.azKey)}" autocomplete="off"></label>
-    <label class="f">Region<input id="s-azregion" value="${esc(s.azRegion)}" placeholder="e.g. westeurope, eastus"></label>
+    <label class="f">Region<input id="s-azregion" value="${esc(s.azRegion)}" placeholder="e.g. westeurope, eastus"></label>`}
     ${azVoices.all ? `<label class="f">${esc(langName(s.target))} voice<select id="s-azvoice"><option value="">Automatic</option>${azVoices.all.filter(v => v.Locale.toLowerCase().startsWith(pre(s.target))).map(v => `<option value="${esc(v.ShortName)}" ${s.azVoice[s.target] === v.ShortName ? 'selected' : ''}>${esc(v.LocalName || v.DisplayName)} · ${esc(v.Gender)} (${esc(v.Locale)})</option>`).join('')}</select></label>` : ''}
-    <div class="row" style="margin-bottom:12px"><button class="btn" data-a="azLoad">${azVoices.all ? 'Reload voices' : 'Check key &amp; load voices'}</button></div>
-    <p class="muted">Create a “Speech” resource in the Azure portal and copy its key and region here. The text being read is sent to Azure; if it cannot be reached, the tablet's own voice is used.</p>`
+    <div class="row" style="margin-bottom:12px"><button class="btn" data-a="azLoad">${azVoices.all ? 'Reload voices' : azServer() ? 'Choose a voice' : 'Check key &amp; load voices'}</button></div>
+    <p class="muted">${azServer() ? '' : 'Create a “Speech” resource in the Azure portal and copy its key and region here. '}The text being read is sent to Azure; if it cannot be reached, the tablet's own voice is used.</p>`
     : !TTS ? '<p class="muted">This browser does not support text-to-speech.</p>' : `
     <label class="f">${esc(langName(s.target))} voice<select id="s-voice"><option value="">Automatic</option>${vs.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI === s.voice ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})${v.localService ? ' · offline' : ''}</option>`).join('')}</select></label>
     ${vs.length ? '' : `<p class="muted">No ${esc(langName(s.target))} voice was found. Install one in your tablet's settings (Android: Settings → Accessibility → Text-to-speech → install voice data; iPad: Settings → Accessibility → Spoken Content → Voices), then reopen the app.</p>`}`}
@@ -1060,10 +1169,10 @@ function vSettings() {
       <option value="libre" ${s.provider === 'libre' ? 'selected' : ''}>LibreTranslate server (your own or hosted)</option></select></label>
     ${s.provider === 'libre' ? `<label class="f">Server address<input id="s-lturl" placeholder="https://…" value="${esc(s.ltUrl)}"></label>
       <label class="f">API key (if required)<input id="s-ltkey" value="${esc(s.ltKey)}" autocomplete="off"></label>`
-    : s.provider === 'deepseek' ? '<p class="muted" style="margin:0">Text you translate is sent to DeepSeek using the key above.</p>'
+    : s.provider === 'deepseek' ? '<p class="muted" style="margin:0">Text you translate is sent to DeepSeek.</p>'
     : `<label class="f">Email for MyMemory (optional)<input id="s-email" type="email" value="${esc(s.email)}" placeholder="raises the free limit from ~5,000 to ~50,000 characters a day"></label>
       <p class="muted" style="margin:0">Text you translate is sent to mymemory.translated.net${s.email ? ' together with this email address' : ''}. Reading, audio, word tracking and flashcards work offline.</p>`}</div>
-  <div class="card"><h2>Your data</h2><p class="muted" style="margin-top:0">Everything is stored only on this device, in this browser.</p>
+  <div class="card"><h2>Your data</h2><p class="muted" style="margin-top:0">${SV.on ? 'Progress is saved on this tablet and on your server, which also keeps a backup for each of the last 7 days.' : 'Everything is stored only on this device, in this browser.'}</p>
     <div class="row"><button class="btn" data-a="backup">Export backup</button>
       <label class="btn" style="display:inline-flex;align-items:center">Import backup<input type="file" id="s-import" accept=".json,application/json" hidden></label>
       <button class="btn danger" data-a="reset">Erase everything</button></div></div>`;
@@ -1077,7 +1186,7 @@ const refreshWords = () => { const el = $('#w-list'); if (el) el.innerHTML = wor
 /* ---------------- AI stories ---------------- */
 const CEFR = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const G = {topic: '', len: 300, words: true, busy: false};
-const needKey = title => `<div class="top"><h1>${title}</h1></div><div class="card empty"><p>This uses your own DeepSeek API key. Add it once in Settings — it is stored only on this device.</p><button class="btn primary" data-a="go" data-v="settings">Open Settings</button></div>`;
+const needKey = title => `<div class="top"><h1>${title}</h1></div><div class="card empty"><p>${SV.on ? 'The AI is not set up on your server yet: add DEEPSEEK_API_KEY to its environment variables, or enter a key in Settings.' : 'This uses your own DeepSeek API key. Add it once in Settings — it is stored only on this device.'}</p><button class="btn primary" data-a="go" data-v="settings">Open Settings</button></div>`;
 const myLevel = () => S.settings.storyLevel || level(totals().input).name;
 function vStory() {
   if (!hasAI()) return needKey('Generate a story');
@@ -1175,6 +1284,15 @@ async function tutorSend(text) {
 const ACT = {
   go: el => go(el.dataset.v),
   genStory,
+  async login() {
+    SV.pw = $('#l-pw').value;
+    let r; try { r = await api('login', {method: 'POST'}); } catch (e) { return toast('Could not reach the server.'); }
+    if (!r.ok) return toast((await apiError(r)).message);
+    lsSet('storyglot.pw', SV.pw); SV.authed = true; SV.err = '';
+    await pull(); go(S.settings.target ? 'home' : 'welcome');
+  },
+  logout() { lsSet('storyglot.pw', ''); SV.pw = ''; SV.authed = false; render(); },
+  syncNow() { (S.sync.dirty ? push() : pull()).then(() => { if (view === 'settings') render(); }); },
   tutorSend() { const el = $('#t-in'), v = el.value.trim(); if (v) tutorSend(v); },
   tutorStart() { tutorSend(''); },
   tutorNew() { stopSpeech(); S.tutor.msgs = []; saveNow(); render(); },
@@ -1288,6 +1406,7 @@ document.addEventListener('change', e => {
       } catch (err) { toast('That file is not a Storyglot backup.'); } }); break; }
   }
 });
+document.addEventListener('keydown', e => { if (e.target.id === 'l-pw' && e.key === 'Enter') ACT.login(); });
 document.addEventListener('keydown', e => { if (e.target.id === 't-in' && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); ACT.tutorSend(); } });
 document.addEventListener('input', e => {
   if (e.target.id === 'w-q') { WF.q = e.target.value; refreshWords(); }
@@ -1295,7 +1414,7 @@ document.addEventListener('input', e => {
 });
 
 /* ---------------- boot ---------------- */
-load().then(() => { applyTheme(); render(); });
+load().then(() => { applyTheme(); render(); return connect(); }).then(() => render());
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
