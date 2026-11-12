@@ -139,11 +139,23 @@ progress{width:100%;height:10px;accent-color:var(--accent)}
 .days i.a{background:var(--accent);color:var(--accent-ink);font-weight:700}
 .split{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--soft);margin:8px 0}
 .split i{display:block;height:100%}
+#video{position:sticky;top:0;z-index:6;background:#000;display:flex;justify-content:center}
+#video iframe,#ytp{width:min(100%,560px);aspect-ratio:16/9;height:auto;max-height:38vh;border:0}
+body.yt .readbar{position:static}
+.chat{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.bub{max-width:85%;padding:10px 14px;border-radius:16px;border:1px solid var(--line);background:var(--card);overflow-wrap:anywhere}
+.bub.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.bub.a{align-self:flex-start;font:1.15rem/1.8 var(--serif)}
+.bub .fix{font:.9rem/1.4 var(--sans);color:var(--mute);border-top:1px dashed var(--line);margin-top:8px;padding-top:6px}
+.bub .tools{display:flex;gap:6px;margin-top:6px}
+.bub .tools button{border:0;background:var(--soft);border-radius:8px;padding:4px 10px;font:.8rem var(--sans);min-height:32px}
+.send{display:flex;gap:8px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;z-index:50;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;max-width:90vw;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 [hidden]{display:none!important}
 </style>
 </head>
 <body>
+<div id="video" hidden><div id="ytp"></div></div>
 <div id="main"></div>
 <aside id="sheet" hidden></aside>
 <div id="player" hidden></div>
@@ -180,8 +192,9 @@ const num = n => Math.round(n).toLocaleString();
 
 /* ---------------- state & storage (IndexedDB, falling back to localStorage) ---------------- */
 const DEFAULTS = () => ({
-  settings: {native:'en', target:'', rate:0.9, voice:'', provider:'auto', email:'', ltUrl:'', ltKey:'', goal:1000, font:22, theme:'auto', autoKnown:true},
-  lessons: [], words: {}, cache: {}, stats: {days: {}}
+  settings: {native:'en', target:'', rate:0.9, voice:'', provider:'auto', email:'', ltUrl:'', ltKey:'', goal:1000, font:22, theme:'auto', autoKnown:true,
+    dsKey:'', dsUrl:'https://api.deepseek.com', dsModel:'deepseek-chat', storyLevel:'', tts:'device', azKey:'', azRegion:'', azVoice:{}},
+  lessons: [], words: {}, cache: {}, stats: {days: {}}, tutor: {msgs: [], scene: 'free'}
 });
 let S = DEFAULTS(), memOnly = false, saveTimer = 0, idb = null;
 const merge = d => { const def = DEFAULTS(); return {...def, ...d, settings: {...def.settings, ...d.settings}, stats: {days: {}, ...d.stats}}; };
@@ -331,6 +344,26 @@ async function libre(text, from, to) {
   if (!r.ok || !j.translatedText) throw new Error('Translation failed' + (j.error ? ': ' + j.error : ' (' + r.status + ').'));
   return j.translatedText;
 }
+/* ---------------- AI (DeepSeek, OpenAI-compatible; the key stays on this device) ---------------- */
+const hasAI = () => !!S.settings.dsKey;
+async function ai(messages, {json = false, temp = 1, max = 2000} = {}) {
+  const s = S.settings;
+  if (!s.dsKey) throw new Error('Add your DeepSeek API key in Settings first.');
+  const base = (s.dsUrl || 'https://api.deepseek.com').trim().replace(/\/+$/, '');
+  let r;
+  try {
+    r = await fetch(base + '/chat/completions', {method: 'POST', headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + s.dsKey},
+      body: JSON.stringify({model: s.dsModel || 'deepseek-chat', messages, temperature: temp, max_tokens: max, ...(json ? {response_format: {type: 'json_object'}} : {})})});
+  } catch (e) { throw new Error(navigator.onLine === false ? 'You are offline — the AI needs an internet connection.' : 'Could not reach the AI service from this browser. If this keeps happening, see “AI relay” in the README.'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(r.status === 401 ? 'The AI key was rejected — check it in Settings.' : r.status === 402 ? 'Your DeepSeek balance is empty.' : r.status === 429 ? 'The AI service is busy — try again in a moment.' : 'AI error: ' + ((j.error && j.error.message) || r.status));
+  const out = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+  if (!out) throw new Error('The AI returned an empty answer.');
+  return out.trim();
+}
+const aiTranslate = (text, from, to) => ai([
+  {role: 'system', content: `You are a translator. Translate the user's text from ${langName(from)} to ${langName(to)}. Reply with the translation only: no quotes, no notes.`},
+  {role: 'user', content: text}], {temp: 0.2, max: 1500});
 async function translate(text, from, to) {
   text = text.trim();
   if (!text || from === to) return text;
@@ -340,8 +373,10 @@ async function translate(text, from, to) {
   const p = S.settings.provider;
   let out = null;
   if (p === 'libre') out = await libre(text, from, to);
+  else if (p === 'deepseek') out = await aiTranslate(text, from, to);
   else {
     if (p === 'auto') out = await onDevice(text, from, to);
+    if (out == null && p === 'auto' && hasAI()) out = await aiTranslate(text, from, to);
     if (out == null) out = await myMemory(text, from, to);
   }
   out = out.trim();
@@ -355,16 +390,48 @@ const TTS = 'speechSynthesis' in self && 'SpeechSynthesisUtterance' in self;
 let voices = [];
 function loadVoices() { voices = TTS ? speechSynthesis.getVoices() : []; }
 if (TTS) { loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', () => { loadVoices(); if (view === 'settings') render(); }); }
-const voicesFor = lang => voices.filter(v => v.lang.replace('_', '-').toLowerCase().startsWith(lang));
+const pre = lang => langLocale(lang).split('-')[0].toLowerCase();
+const voicesFor = lang => voices.filter(v => { const x = v.lang.replace('_', '-').toLowerCase(); return x.startsWith(lang) || x.startsWith(pre(lang)); });
 function pickVoice(lang) {
   const list = voicesFor(lang);
   return list.find(v => v.voiceURI === S.settings.voice) || list.find(v => v.lang.replace('_', '-') === langLocale(lang)) || list[0] || null;
 }
 const P = {i: 0, playing: false, tok: 0, repeat: false, t0: 0, u: null};
-function speak(text, lang, {rate, onend, onboundary, onerror} = {}) {
+// Optional Azure neural voices (the user's own Speech key); audio is fetched per sentence and cached for the session.
+const AUD = new Audio(), azCache = new Map(), azVoices = {all: null};
+const SILENT = 'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+const useAzure = () => S.settings.tts === 'azure' && !!S.settings.azKey && !!S.settings.azRegion;
+const azHost = () => `https://${S.settings.azRegion.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}.tts.speech.microsoft.com/cognitiveservices`;
+async function azVoiceList(lang) {
+  if (!azVoices.all) {
+    let r;
+    try { r = await fetch(azHost() + '/voices/list', {headers: {'Ocp-Apim-Subscription-Key': S.settings.azKey}}); }
+    catch (e) { throw new Error('Could not reach Azure Speech — check the region and your connection.'); }
+    if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Azure rejected the Speech key or region.' : 'Azure Speech error ' + r.status + '.');
+    azVoices.all = await r.json();
+  }
+  return azVoices.all.filter(v => v.Locale.toLowerCase().startsWith(pre(lang)));
+}
+async function azFetch(text, lang) {
+  const list = await azVoiceList(lang);
+  if (!list.length) throw new Error('Azure has no ' + langName(lang) + ' voice.');
+  const v = list.find(x => x.ShortName === S.settings.azVoice[lang]) || list.find(x => x.Locale === langLocale(lang)) || list[0], k = v.ShortName + '|' + text;
+  if (azCache.has(k)) return azCache.get(k);
+  let r;
+  try {
+    r = await fetch(azHost() + '/v1', {method: 'POST',
+      headers: {'Ocp-Apim-Subscription-Key': S.settings.azKey, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3'},
+      body: `<speak version="1.0" xml:lang="${v.Locale}"><voice name="${v.ShortName}">${esc(text)}</voice></speak>`});
+  } catch (e) { throw new Error('Could not reach Azure Speech.'); }
+  if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Azure rejected the Speech key or region.' : r.status === 429 ? 'Azure Speech quota reached.' : 'Azure Speech error ' + r.status + '.');
+  const url = URL.createObjectURL(await r.blob());
+  if (azCache.size > 300) { const [k0, u0] = azCache.entries().next().value; URL.revokeObjectURL(u0); azCache.delete(k0); }
+  azCache.set(k, url);
+  return url;
+}
+function haltAudio() { if (TTS) speechSynthesis.cancel(); AUD.onended = AUD.onerror = null; AUD.pause(); }
+function deviceSpeak(my, text, lang, {rate, onend, onboundary, onerror} = {}) {
   if (!TTS) { toast('This browser has no text-to-speech.'); return; }
-  const my = ++P.tok;
-  speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text), v = pickVoice(lang);
   u.lang = v ? v.lang : langLocale(lang); if (v) u.voice = v;
   u.rate = rate || S.settings.rate;
@@ -374,21 +441,123 @@ function speak(text, lang, {rate, onend, onboundary, onerror} = {}) {
   P.u = u;                                              // keep a reference: some engines drop events otherwise
   setTimeout(() => { if (my === P.tok) speechSynthesis.speak(u); }, 60);   // speak() right after cancel() can be swallowed
 }
+function speak(text, lang, o = {}) {
+  const my = ++P.tok;
+  haltAudio();
+  if (!useAzure()) return deviceSpeak(my, text, lang, o);
+  if (!AUD.unlocked) { AUD.unlocked = true; AUD.src = SILENT; AUD.play().catch(() => {}); }   // started by the tap, so later plays are allowed on tablets
+  azFetch(text, lang).then(url => {
+    if (my !== P.tok) return;
+    AUD.src = url; AUD.playbackRate = o.rate || S.settings.rate;
+    AUD.onended = () => { if (my === P.tok && o.onend) o.onend(); };
+    return AUD.play();
+  }).catch(e => {
+    if (my !== P.tok) return;
+    if (!P.azWarned) { P.azWarned = true; toast((e.name === 'NotAllowedError' ? 'The browser blocked audio playback.' : e.message) + ' Using the device voice instead.'); }
+    deviceSpeak(my, text, lang, o);
+  });
+}
 function logListen() { if (P.playing && P.t0) bump('listen', Math.round((Date.now() - P.t0) / 1000)); P.t0 = 0; }
-function stopSpeech() { P.tok++; if (TTS) speechSynthesis.cancel(); logListen(); P.playing = false; }
+function stopSpeech() { P.tok++; haltAudio(); if (Y.p && Y.ready) Y.p.pauseVideo(); logListen(); P.playing = false; }
 function playFrom(i) {
   const L = cur(); if (!L) return;
-  logListen();
   if (i < 0) i = 0;
+  if (videoMode(L)) {                                   // video lessons: the video is the audio
+    if (i >= L.sents.length) return;
+    P.tok++; haltAudio(); P.i = i; markSentence(i, true);
+    Y.p.seekTo(L.sents[i].at, true); Y.p.playVideo(); drawPlayer(); return;
+  }
+  logListen();
   if (i >= L.sents.length) { stopSpeech(); drawPlayer(); return; }
   P.i = i; P.playing = true; P.t0 = Date.now();
   markSentence(i, true); drawPlayer();
-  if (!voicesFor(L.lang).length && voices.length && !P.warned) { P.warned = true; toast('No ' + langName(L.lang) + ' voice found on this device — install one in your system text-to-speech settings for natural audio.'); }
+  if (!useAzure() && !voicesFor(L.lang).length && voices.length && !P.warned) { P.warned = true; toast('No ' + langName(L.lang) + ' voice found on this device — install one in your system text-to-speech settings for natural audio.'); }
   speak(L.sents[i].t, L.lang, {
     onboundary: e => markSpoken(i, e.charIndex),
     onend: () => { bump('heard', sentWords(L.sents[i].t, L.lang).length); if (L.pos !== i) { L.pos = i; save(); } playFrom(P.repeat ? i : i + 1); },
     onerror: () => { stopSpeech(); drawPlayer(); toast('Audio playback failed on this device.'); }
   });
+  if (useAzure() && L.sents[i + 1]) azFetch(L.sents[i + 1].t, L.lang).catch(() => {});   // warm up the next sentence
+}
+
+/* ---------------- YouTube: embedded player kept in sync with the transcript ---------------- */
+const Y = {p: null, ready: false, id: '', bad: '', loading: null, timer: 0, on: false};
+const ytId = u => { const m = String(u || '').match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/); return m ? m[1] : ''; };
+const videoMode = L => !!(L && L.yt && Y.ready && Y.id === L.yt && Y.bad !== L.yt && L.sents[0].at != null);
+function ytApi() {
+  return Y.loading ||= new Promise((res, rej) => {
+    if (self.YT && self.YT.Player) return res();
+    self.onYouTubeIframeAPIReady = () => res();
+    const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => { Y.loading = null; rej(new Error('offline')); };
+    document.head.appendChild(s);
+  });
+}
+function syncVideo() {
+  const box = $('#video'), L = view === 'reader' ? cur() : null, id = (L && L.yt) || '';
+  document.body.classList.toggle('yt', !!id);
+  box.hidden = !id;
+  if (!id) { if (Y.p && Y.ready) Y.p.pauseVideo(); return; }
+  if (Y.id === id) return;
+  Y.id = id;
+  ytApi().then(() => {
+    if (Y.p) { if (Y.ready) Y.p.cueVideoById(Y.id); return; }
+    Y.p = new self.YT.Player('ytp', {videoId: Y.id, playerVars: {playsinline: 1, rel: 0}, events: {
+      onReady: () => { Y.ready = true; if (Y.p.getVideoData && Y.p.getVideoData().video_id !== Y.id && Y.id) Y.p.cueVideoById(Y.id); drawPlayer(); },
+      onStateChange: ytState,
+      onError: () => { Y.bad = Y.id; toast('This video cannot be played here — the voice will read the text instead.'); drawPlayer(); }}});
+  }).catch(() => { box.hidden = true; Y.id = ''; });
+}
+function ytState(e) {
+  const on = e.data === 1; if (on === Y.on) return; Y.on = on;
+  clearInterval(Y.timer);
+  if (on) { P.playing = true; P.t0 = Date.now(); Y.timer = setInterval(ytTick, 300); Y.p.setPlaybackRate(S.settings.rate); }
+  else { logListen(); P.playing = false; }
+  drawPlayer();
+}
+function ytTick() {
+  const L = cur(); if (!videoMode(L)) return;
+  const t = Y.p.getCurrentTime(); let i = 0;
+  while (i + 1 < L.sents.length && L.sents[i + 1].at <= t + 0.15) i++;
+  if (i === P.i) { if (!$('.s.cur')) markSentence(i, false); return; }
+  if (P.repeat && i === P.i + 1) { Y.p.seekTo(L.sents[P.i].at, true); return; }
+  if (i === P.i + 1) bump('heard', sentWords(L.sents[P.i].t, L.lang).length);
+  P.i = i; L.pos = i; save(); markSentence(i, true); drawPlayer();
+}
+// Transcript with timestamps (copied from YouTube, or .srt/.vtt) -> [{t: seconds, text}]
+function parseCues(text) {
+  const ts = /^\[?(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:[.,]\d+)?\]?/, cues = []; let t = 0, n = 0;
+  for (const raw of text.split(/\n/)) {
+    let l = raw.trim(); if (!l || /^\d+$/.test(l) || /^WEBVTT/i.test(l)) continue;
+    const m = l.match(ts);
+    if (m) { t = (+(m[1] || 0)) * 3600 + (+m[2]) * 60 + (+m[3]); n++; l = l.slice(m[0].length).trim(); if (!l || /^-->/.test(l)) continue; }
+    l = l.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(); if (!l) continue;
+    const last = cues[cues.length - 1];
+    if (last && last.text === l) continue;                // rolling auto-captions repeat lines
+    if (last && last.t === t && !m) last.text += ' ' + l; else cues.push({t, text: l});
+  }
+  return n >= 3 && cues.length >= 2 ? cues : null;
+}
+function cuesToSents(cues, lang) {
+  const full = cues.map(c => c.text).join(' '), stops = (full.match(/[.!?。！？]/g) || []).length;
+  if (stops && sentWords(full, lang).length / stops < 40) {            // punctuated: real sentences, timed by the cue they start in
+    const starts = []; let off = 0; for (const c of cues) { starts.push(off); off += c.text.length + 1; }
+    let pos = 0, ci = 0;
+    return splitSents(full, lang).map((s, i) => {
+      const at = Math.max(pos, full.indexOf(s, pos)); pos = at + s.length;
+      while (ci + 1 < cues.length && starts[ci + 1] <= at) ci++;
+      const c = cues[ci], nx = cues[ci + 1];                             // a sentence starting mid-cue gets a proportional time
+      return {t: s, tr: '', p: i % 5 === 0, at: +(c.t + (nx ? (nx.t - c.t) * Math.min(1, (at - starts[ci]) / (c.text.length + 1)) : 0)).toFixed(1)};
+    });
+  }
+  const out = []; let cur = null, wc = 0;                              // auto-captions without punctuation: group a few cues per line
+  for (const c of cues) {
+    if (!cur) { cur = {t: c.text, tr: '', p: out.length % 4 === 0, at: c.t}; wc = 0; } else cur.t += ' ' + c.text;
+    wc += sentWords(c.text, lang).length;
+    if (wc >= 12) { out.push(cur); cur = null; }
+  }
+  if (cur) out.push(cur);
+  return out;
 }
 function markSentence(i, scroll) {
   document.querySelectorAll('.s.cur,.w.sp').forEach(e => e.classList.remove('cur', 'sp'));
@@ -405,7 +574,7 @@ function markSpoken(i, ch) {
 /* ---------------- views ---------------- */
 let view = 'home';
 const R = {id: null, lines: false, sel: null};       // reader state
-const A = {native: true, busy: false, done: 0, total: 0, abort: false, title: '', text: ''};   // add-text form state
+const A = {native: true, busy: false, done: 0, total: 0, abort: false, title: '', text: '', yt: ''};   // add-text form state
 const RV = {queue: [], shown: false, done: 0, mode: 'meaning', active: false};   // flashcard session
 const WF = {q: '', st: 'all'};                        // word list filter
 const LF = {show: 'all'};                             // library filter
@@ -422,12 +591,13 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyThe
 const ICON = {
   home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   library: '<path d="M4 5a2 2 0 0 1 2-2h5v17H6a2 2 0 0 0-2 2zM20 5a2 2 0 0 0-2-2h-5v17h5a2 2 0 0 1 2 2z"/>',
+  tutor: '<path d="M4 5h16v11H9l-5 4z"/>',
   review: '<rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/>',
   stats: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'
 };
-const TABS = [['home', 'Home'], ['library', 'Library'], ['review', 'Flashcards'], ['stats', 'Progress'], ['settings', 'Settings']];
-const TAB_OF = {add: 'library', words: 'review'};
+const TABS = [['home', 'Home'], ['library', 'Library'], ['tutor', 'Tutor'], ['review', 'Flashcards'], ['stats', 'Progress'], ['settings', 'Settings']];
+const TAB_OF = {add: 'library', story: 'library', words: 'review'};
 function drawTabs() {
   const el = $('#tabs');
   el.hidden = view === 'reader' || view === 'welcome';
@@ -442,8 +612,8 @@ function render() {
   const m = $('#main');
   $('#player').hidden = view !== 'reader';
   m.innerHTML = (memOnly ? '<div class="banner">Storage is not available in this browser mode, so progress will be lost when you close the page. Open the app from a web address (see README) or export a backup in Settings.</div>' : '') +
-    ({welcome: vWelcome, home: vHome, library: vLibrary, add: vAdd, reader: vReader, review: vReview, words: vWords, stats: vStats, settings: vSettings}[view])();
-  drawTabs();
+    ({welcome: vWelcome, home: vHome, library: vLibrary, add: vAdd, reader: vReader, story: vStory, tutor: vTutor, review: vReview, words: vWords, stats: vStats, settings: vSettings}[view])();
+  drawTabs(); syncVideo();
   if (view === 'reader') { drawPlayer(); applyFont(); }
   if (view === 'review' && RV.active && RV.mode === 'listen' && !RV.shown && RV.queue.length) speak(RV.queue[0], S.settings.target, {rate: Math.min(S.settings.rate, 0.9)});
 }
@@ -491,13 +661,13 @@ function vHome() {
   </div>
   ${next ? `<h2>Continue</h2>${lessonCard(next)}` : ''}
   ${c.due ? `<div class="card row"><div class="grow"><b>${c.due} flashcard${c.due === 1 ? '' : 's'} due</b><div class="muted">A short review keeps new words alive.</div></div><button class="btn primary" data-a="go" data-v="review">Review</button></div>` : ''}
-  <button class="btn ${next ? '' : 'primary'}" data-a="go" data-v="add" style="width:100%">+ Add a text</button>
+  <div class="row"><button class="btn ${next ? '' : 'primary'} grow" data-a="go" data-v="add">+ Add a text or video</button><button class="btn grow" data-a="go" data-v="story">✨ Generate a story</button></div>
   ${next ? '' : `<div class="empty">Paste an article, a message, song lyrics or open a book — anything you find interesting — and turn it into a ${esc(langName(t))} lesson with audio.</div>`}`;
 }
 function vLibrary() {
   const t = S.settings.target;
   const list = S.lessons.filter(l => l.lang === t && (LF.show === 'all' || (LF.show === 'read') === !!l.done)).sort((a, b) => b.created - a.created || a.part - b.part);
-  return `<div class="top"><h1 class="grow">Library</h1><button class="btn primary" data-a="go" data-v="add">+ Add a text</button></div>
+  return `<div class="top"><h1 class="grow">Library</h1><button class="btn" data-a="go" data-v="story">✨ Story</button><button class="btn primary" data-a="go" data-v="add">+ Add</button></div>
   <div class="seg">${[['all', 'All'], ['unread', 'To read'], ['read', 'Read']].map(([v, n]) => `<button data-a="libFilter" data-v="${v}" class="${LF.show === v ? 'on' : ''}">${n}</button>`).join('')}</div>
   ${list.length ? list.map(lessonCard).join('') : '<div class="empty">Nothing here yet.</div>'}`;
 }
@@ -509,10 +679,12 @@ function vAdd() {
     <div class="seg"><button data-a="addMode" data-n="1" class="${A.native ? 'on' : ''}">My text is in ${esc(n)}<br><small>translate it into ${esc(t)}</small></button>
       <button data-a="addMode" data-n="" class="${A.native ? '' : 'on'}">My text is already in ${esc(t)}</button></div>
     <label class="f">Title<input id="a-title" maxlength="120" placeholder="Optional" value="${esc(A.title)}"></label>
+    ${A.native ? '' : `<label class="f">YouTube link (optional)<input id="a-yt" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" value="${esc(A.yt)}"></label>
+    <p class="muted" style="margin-top:-6px">For a video, paste its transcript below: on youtube.com open the video description, choose “Show transcript”, then select and copy the lines. Keep the timestamps — they sync the text with the video.</p>`}
     <label class="f">Text<textarea id="a-text" placeholder="Paste or type your text here…">${esc(A.text)}</textarea></label>
     <div class="row">
       <button class="btn primary" data-a="create" ${A.busy ? 'disabled' : ''}>${A.native ? 'Translate &amp; create lesson' : 'Create lesson'}</button>
-      <label class="btn" style="display:inline-flex;align-items:center">Open a file (.txt, .epub)<input type="file" id="a-file" accept=".txt,.epub,text/plain,application/epub+zip" hidden></label>
+      <label class="btn" style="display:inline-flex;align-items:center">Open a file (.txt, .epub, .srt, .vtt)<input type="file" id="a-file" accept=".txt,.epub,.srt,.vtt,text/plain,application/epub+zip" hidden></label>
     </div>
     ${A.busy ? `<div style="margin-top:14px"><progress max="${A.total}" value="${A.done}"></progress>
       <div class="row muted"><span id="a-prog">Translating sentence ${A.done} of ${A.total}…</span> <button class="btn" data-a="cancelCreate">Cancel</button></div></div>` : ''}
@@ -555,7 +727,7 @@ function applyFont() { const t = $('#text'); if (t) t.style.fontSize = S.setting
 function drawPlayer() {
   const el = $('#player'); if (view !== 'reader') return;
   const L = cur(); if (!L) return;
-  if (!TTS) { el.innerHTML = '<span class="muted">This browser does not support text-to-speech.</span>'; return; }
+  if (!TTS && !useAzure() && !videoMode(L)) { el.innerHTML = '<span class="muted">This browser does not support text-to-speech.</span>'; return; }
   const rates = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
   el.innerHTML = `<button class="btn" data-a="prev" aria-label="Previous sentence">⏮</button>
     <button class="btn primary play" data-a="toggle" aria-label="${P.playing ? 'Pause' : 'Play'}">${P.playing ? '❚❚' : '▶'}</button>
@@ -575,7 +747,7 @@ function closeSheet() { $('#sheet').hidden = true; R.sel = null; document.queryS
 function drawSheet() {
   const el = $('#sheet'), sel = R.sel; if (!sel) { el.hidden = true; return; }
   const saved = dict(sel.lang)[sel.k], e = saved || {s: 0, tr: sel.tr};
-  const L = cur(), sent = L && sel.i != null ? L.sents[sel.i] : null, ctx = sent ? sent.t : e.ctx;
+  const L = cur(), sent = L && sel.i != null ? L.sents[sel.i] : null, ctx = sent ? sent.t : (e.ctx || sel.ctx);
   el.innerHTML = `<div class="hd"><b lang="${esc(sel.lang)}">${esc(sel.surface)}</b>
       <button class="mini" data-a="sayWord" aria-label="Listen">🔊</button><button class="mini" data-a="closeSheet" aria-label="Close">✕</button></div>
     <input id="s-mean" value="${esc(e.tr || sel.tr || '')}" placeholder="${sel.busy ? 'Looking up…' : sel.err ? 'Type a meaning' : 'Meaning'}" aria-label="Meaning">
@@ -583,7 +755,8 @@ function drawSheet() {
     <div class="status">${ST.map(([n, t, c]) => `<button class="${c} ${e.s === n ? 'on' : ''}" data-a="setSt" data-s="${n}">${t}</button>`).join('')}</div>
     <div class="muted" style="margin-bottom:6px">${!e.s ? 'Pick a level to save this as a flashcard.' : e.s <= 3 ? 'In your flashcards' : e.s === 4 ? 'No longer reviewed' : 'Ignored'}${e.n ? ` · met ${e.n} time${e.n === 1 ? '' : 's'}` : ''}</div>
     ${ctx ? `<div class="ctx" lang="${esc(sel.lang)}">${esc(ctx)}${sent && sent.tr ? `<small>${esc(sent.tr)}</small>` : ''}</div>
-      <div class="row">${sent ? `<button class="btn" data-a="playSent" data-i="${sel.i}">▶ Sentence</button>${sent.tr ? '' : `<button class="btn" data-a="trSent" data-i="${sel.i}">Translate sentence</button>`}` : ''}</div>` : ''}`;
+      <div class="row">${sent ? `<button class="btn" data-a="playSent" data-i="${sel.i}">▶ Sentence</button>${sent.tr ? '' : `<button class="btn" data-a="trSent" data-i="${sel.i}">Translate sentence</button>`}` : ''}${hasAI() ? '<button class="btn" data-a="explain">✨ Explain</button>' : ''}</div>` : ''}
+    ${sel.ex ? `<div class="ctx" style="font-family:var(--sans);font-size:.95rem">${esc(sel.ex)}</div>` : ''}`;
   el.hidden = false;
 }
 function setStatus(lang, k, s, init = {}) {
@@ -595,8 +768,8 @@ function setStatus(lang, k, s, init = {}) {
   e.s = s; save(); paintWord(lang, k);
 }
 // Tapping a word looks it up and adds it to the flashcards; a selected phrase is only saved once a level is picked.
-async function openWord(lang, k, surface, i, phrase) {
-  const d = dict(lang), L = cur(), ctx = L && i != null ? L.sents[i].t : '';
+async function openWord(lang, k, surface, i, phrase, ctxText) {
+  const d = dict(lang), L = cur(), ctx = ctxText || (L && i != null ? L.sents[i].t : '');
   if (!phrase && !stOf(lang, k)) setStatus(lang, k, 1, {ctx});
   const sel = R.sel = {lang, k, surface, i, ctx, tr: '', busy: !(d[k] && d[k].tr), err: ''};
   drawSheet();
@@ -676,42 +849,54 @@ async function pool(items, n, fn) {
   await Promise.all(Array.from({length: Math.min(n, items.length)}, async () => { while (idx < items.length) { const i = idx++; await fn(items[i], i); } }));
 }
 const PART_WORDS = 700;                                  // long texts become chapters of roughly this size
+function textToSents(text, lang) {
+  const out = [];
+  text.split(/\n+/).map(p => p.trim()).filter(Boolean).forEach(p => splitSents(p, lang).forEach((s, i) => out.push({t: s, tr: '', p: i === 0})));
+  return out;
+}
+function addLessons(title, sents, extra = {}) {
+  const lang = S.settings.target, parts = [[]]; let wc = 0;
+  for (const s of sents) {
+    if (wc >= PART_WORDS && s.p) { parts.push([]); wc = 0; }
+    parts[parts.length - 1].push(s); wc += sentWords(s.t, lang).length;
+  }
+  const base = title || sents[0].t.slice(0, 60), created = Date.now();
+  const made = parts.map((ps, i) => {
+    const L = {id: uid(), lang, title: parts.length > 1 ? `${base} · ${i + 1}/${parts.length}` : base, sents: ps, created, part: i, pos: 0, done: false, ...extra};
+    L.wc = lessonWords(L).length; return L;
+  });
+  S.lessons.push(...made); saveNow();
+  if (made.length > 1) toast(`Split into ${made.length} chapters.`);
+  openLesson(made[0].id);
+}
 async function createLesson() {
   if (A.busy) return;
   const title = $('#a-title').value.trim(), text = $('#a-text').value.trim();
-  A.title = title; A.text = text;
+  A.title = title; A.text = text; A.yt = ($('#a-yt') || {}).value || '';
   if (!text) { toast('Paste some text first.'); return; }
-  const {native, target} = S.settings, srcLang = A.native ? native : target;
-  const src = [];
-  text.split(/\n+/).map(p => p.trim()).filter(Boolean).forEach(p => splitSents(p, srcLang).forEach((s, i) => src.push({s, p: i === 0})));
+  const {native, target} = S.settings, extra = {};
   let sents;
-  if (!A.native) sents = src.map(x => ({t: x.s, tr: '', p: x.p}));
-  else {
+  if (!A.native) {
+    const id = ytId(A.yt), cues = parseCues(text);
+    if (A.yt.trim() && !id) { toast('That does not look like a YouTube link.'); return; }
+    sents = cues ? cuesToSents(cues, target) : textToSents(text, target);
+    if (id) { extra.yt = id; if (!cues) toast('No timestamps found, so the text will not follow the video.'); }
+  } else {
+    const src = textToSents(text, native);
     A.busy = true; A.abort = false; A.done = 0; A.total = src.length; render();
     const out = new Array(src.length);
     try {
       await pool(src, 3, async (x, i) => {
         if (A.abort) throw new Error('Cancelled.');
-        out[i] = {t: await translate(x.s, native, target), tr: x.s, p: x.p};
+        out[i] = {t: await translate(x.t, native, target), tr: x.t, p: x.p};
         A.done++; const pr = $('progress'), lb = $('#a-prog'); if (pr) pr.value = A.done; if (lb) lb.textContent = `Translating sentence ${A.done} of ${A.total}…`;
       });
     } catch (e) { A.busy = false; A.abort = true; if (view === 'add') render(); toast(e.message + (e.message === 'Cancelled.' ? '' : ' Finished sentences are kept — press the button again to resume.')); return; }
     A.busy = false; sents = out;
   }
-  const parts = [[]]; let wc = 0;
-  for (const s of sents) {
-    if (wc >= PART_WORDS && s.p) { parts.push([]); wc = 0; }
-    parts[parts.length - 1].push(s); wc += sentWords(s.t, target).length;
-  }
-  const base = title || sents[0].t.slice(0, 60), created = Date.now();
-  const made = parts.map((ps, i) => {
-    const L = {id: uid(), lang: target, title: parts.length > 1 ? `${base} · ${i + 1}/${parts.length}` : base, sents: ps, created, part: i, pos: 0, done: false};
-    L.wc = lessonWords(L).length; return L;
-  });
-  S.lessons.push(...made); saveNow();
-  A.title = A.text = '';
-  if (made.length > 1) toast(`Split into ${made.length} chapters.`);
-  openLesson(made[0].id);
+  if (!sents.length) { toast('No readable text found.'); return; }
+  A.title = A.text = A.yt = '';
+  addLessons(title, sents, extra);
 }
 function openLesson(id) { R.id = id; R.lines = false; R.sel = null; const L = cur(); if (!L) return; L.opened = Date.now(); save(); P.i = L.pos || 0; P.playing = false; go('reader'); }
 function finishLesson() {
@@ -846,19 +1031,36 @@ function vSettings() {
     <label class="f">Daily goal (words read + listened)<input id="s-goal" type="number" min="50" max="50000" step="50" value="${s.goal}"></label>
     <label class="chk"><input type="checkbox" id="s-auto" ${s.autoKnown ? 'checked' : ''}><span>When I mark a text as read, count the words I did not tap as known</span></label>
     <label class="f">Appearance<select id="s-theme">${[['auto', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([v, n]) => `<option value="${v}" ${s.theme === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
+  <div class="card"><h2>AI — stories, tutor, explanations</h2>
+    <label class="f">DeepSeek API key<input id="s-dskey" type="password" value="${esc(s.dsKey)}" placeholder="sk-…" autocomplete="off"></label>
+    <label class="f">Model<input id="s-dsmodel" value="${esc(s.dsModel)}"></label>
+    <label class="f">Service address (change only if you use a relay)<input id="s-dsurl" value="${esc(s.dsUrl)}"></label>
+    <div class="row"><button class="btn" data-a="testAI">Test key</button></div>
+    <p class="muted" style="margin-bottom:0">The key is stored only on this device and is sent only to the address above. It is left out of backups. Usage is billed to your DeepSeek account.</p></div>
   <div class="card"><h2>Voice</h2>
-    ${!TTS ? '<p class="muted">This browser does not support text-to-speech.</p>' : `
+    <label class="f">Voice source<select id="s-tts">
+      <option value="device" ${s.tts === 'device' ? 'selected' : ''}>This tablet's built-in voices (free, works offline)</option>
+      <option value="azure" ${s.tts === 'azure' ? 'selected' : ''}>Azure neural voices (online, your Azure Speech key)</option></select></label>
+    ${s.tts === 'azure' ? `
+    <label class="f">Azure Speech key<input id="s-azkey" type="password" value="${esc(s.azKey)}" autocomplete="off"></label>
+    <label class="f">Region<input id="s-azregion" value="${esc(s.azRegion)}" placeholder="e.g. westeurope, eastus"></label>
+    ${azVoices.all ? `<label class="f">${esc(langName(s.target))} voice<select id="s-azvoice"><option value="">Automatic</option>${azVoices.all.filter(v => v.Locale.toLowerCase().startsWith(pre(s.target))).map(v => `<option value="${esc(v.ShortName)}" ${s.azVoice[s.target] === v.ShortName ? 'selected' : ''}>${esc(v.LocalName || v.DisplayName)} · ${esc(v.Gender)} (${esc(v.Locale)})</option>`).join('')}</select></label>` : ''}
+    <div class="row" style="margin-bottom:12px"><button class="btn" data-a="azLoad">${azVoices.all ? 'Reload voices' : 'Check key &amp; load voices'}</button></div>
+    <p class="muted">Create a “Speech” resource in the Azure portal and copy its key and region here. The text being read is sent to Azure; if it cannot be reached, the tablet's own voice is used.</p>`
+    : !TTS ? '<p class="muted">This browser does not support text-to-speech.</p>' : `
     <label class="f">${esc(langName(s.target))} voice<select id="s-voice"><option value="">Automatic</option>${vs.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI === s.voice ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})${v.localService ? ' · offline' : ''}</option>`).join('')}</select></label>
-    ${vs.length ? '' : `<p class="muted">No ${esc(langName(s.target))} voice was found. Install one in your tablet's settings (Android: Settings → Accessibility → Text-to-speech → install voice data; iPad: Settings → Accessibility → Spoken Content → Voices), then reopen the app.</p>`}
+    ${vs.length ? '' : `<p class="muted">No ${esc(langName(s.target))} voice was found. Install one in your tablet's settings (Android: Settings → Accessibility → Text-to-speech → install voice data; iPad: Settings → Accessibility → Spoken Content → Voices), then reopen the app.</p>`}`}
     <label class="f">Speed: <span id="s-rate-v">${s.rate}×</span><input id="s-rate" type="range" min="0.5" max="1.5" step="0.05" value="${s.rate}"></label>
-    <button class="btn" data-a="testVoice">Test voice</button>`}</div>
+    <button class="btn" data-a="testVoice">Test voice</button></div>
   <div class="card"><h2>Translation</h2>
     <label class="f">Service<select id="s-prov">
-      <option value="auto" ${s.provider === 'auto' ? 'selected' : ''}>Automatic (on-device if the browser has it installed, otherwise MyMemory)</option>
+      <option value="auto" ${s.provider === 'auto' ? 'selected' : ''}>Automatic (on-device if installed, else DeepSeek if a key is set, else MyMemory)</option>
+      <option value="deepseek" ${s.provider === 'deepseek' ? 'selected' : ''}>DeepSeek (your key, best quality)</option>
       <option value="mymemory" ${s.provider === 'mymemory' ? 'selected' : ''}>MyMemory (free, online)</option>
       <option value="libre" ${s.provider === 'libre' ? 'selected' : ''}>LibreTranslate server (your own or hosted)</option></select></label>
     ${s.provider === 'libre' ? `<label class="f">Server address<input id="s-lturl" placeholder="https://…" value="${esc(s.ltUrl)}"></label>
       <label class="f">API key (if required)<input id="s-ltkey" value="${esc(s.ltKey)}" autocomplete="off"></label>`
+    : s.provider === 'deepseek' ? '<p class="muted" style="margin:0">Text you translate is sent to DeepSeek using the key above.</p>'
     : `<label class="f">Email for MyMemory (optional)<input id="s-email" type="email" value="${esc(s.email)}" placeholder="raises the free limit from ~5,000 to ~50,000 characters a day"></label>
       <p class="muted" style="margin:0">Text you translate is sent to mymemory.translated.net${s.email ? ' together with this email address' : ''}. Reading, audio, word tracking and flashcards work offline.</p>`}</div>
   <div class="card"><h2>Your data</h2><p class="muted" style="margin-top:0">Everything is stored only on this device, in this browser.</p>
@@ -872,20 +1074,140 @@ function download(name, text, type) {
 }
 const refreshWords = () => { const el = $('#w-list'); if (el) el.innerHTML = wordRows(); };
 
+/* ---------------- AI stories ---------------- */
+const CEFR = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const G = {topic: '', len: 300, words: true, busy: false};
+const needKey = title => `<div class="top"><h1>${title}</h1></div><div class="card empty"><p>This uses your own DeepSeek API key. Add it once in Settings — it is stored only on this device.</p><button class="btn primary" data-a="go" data-v="settings">Open Settings</button></div>`;
+const myLevel = () => S.settings.storyLevel || level(totals().input).name;
+function vStory() {
+  if (!hasAI()) return needKey('Generate a story');
+  const t = langName(S.settings.target), lv = myLevel();
+  return `<div class="top"><button class="btn" data-a="go" data-v="library">‹ Back</button><h1 class="grow">Generate a story</h1></div>
+  <div class="card">
+    <label class="f">What should it be about?<input id="g-topic" maxlength="200" placeholder="e.g. football, cooking, a detective in Lisbon… (leave empty for a surprise)" value="${esc(G.topic)}"></label>
+    <div class="row"><label class="f grow">Level<select id="g-level">${CEFR.map(l => `<option ${l === lv ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="f grow">Length<select id="g-len">${[[150, 'Short (~150 words)'], [300, 'Medium (~300 words)'], [600, 'Long (~600 words)']].map(([v, n]) => `<option value="${v}" ${G.len === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
+    <label class="chk"><input type="checkbox" id="g-words" ${G.words ? 'checked' : ''}><span>Weave in words from my flashcards, so I meet them again in a new context</span></label>
+    <button class="btn primary" data-a="genStory" ${G.busy ? 'disabled' : ''}>${G.busy ? 'Writing your story…' : `Write a story in ${esc(t)}`}</button>
+  </div>`;
+}
+async function genStory() {
+  if (G.busy) return;
+  const t = S.settings.target, lv = $('#g-level').value;
+  G.topic = $('#g-topic').value.trim(); G.len = +$('#g-len').value; G.words = $('#g-words').checked;
+  S.settings.storyLevel = lv; save();
+  const study = G.words ? Object.entries(dict(t)).filter(([k, e]) => (e.s === 1 || e.s === 2) && !/\s/.test(k)).sort((a, b) => (a[1].due || 0) - (b[1].due || 0)).slice(0, 12).map(([k]) => k) : [];
+  G.busy = true; render();
+  try {
+    const raw = await ai([
+      {role: 'system', content: `You write engaging reading material for language learners. Write entirely in ${langName(t)}, using vocabulary and grammar suitable for CEFR level ${lv}. Answer with a JSON object: {"title": string, "text": string}. The text must be about ${G.len} words, in short paragraphs separated by blank lines, with no translations, no markdown and no notes.`},
+      {role: 'user', content: `Topic or interests: ${G.topic || 'surprise me with an interesting everyday story'}.` + (study.length ? ` Naturally include these words the learner is studying: ${study.join(', ')}.` : '')}],
+      {json: true, temp: 1.1, max: 4000});
+    let o; try { o = JSON.parse(raw.replace(/^```(?:json)?|```$/g, '').trim()); } catch (e) { o = {title: '', text: raw}; }
+    const sents = textToSents(String(o.text || ''), t);
+    if (!sents.length) throw new Error('The AI returned an empty story — try again.');
+    G.busy = false;
+    addLessons(String(o.title || G.topic || 'Story').slice(0, 100), sents, {ai: 1});
+  } catch (e) { G.busy = false; if (view === 'story') render(); toast(e.message); }
+}
+
+/* ---------------- AI tutor (chat, with voice) ---------------- */
+const SCENES = {
+  free: ['Free conversation', 'an open, friendly chat about the learner\'s day, plans and interests'],
+  cafe: ['At a café', 'a role-play: you are a waiter in a café and the learner is the customer'],
+  travel: ['Asking the way', 'a role-play: the learner is a tourist asking you, a local, for directions and tips'],
+  shop: ['Shopping', 'a role-play: you are a shop assistant and the learner wants to buy clothes'],
+  interview: ['Job interview', 'a role-play: you interview the learner for a job they choose'],
+  text: ['About my last text', 'a discussion of the text the learner read most recently (given below): ask what they understood and what they think']
+};
+const TU = {busy: false, auto: true, draft: ''};
+const SR = self.SpeechRecognition || self.webkitSpeechRecognition;
+function tutorSystem() {
+  const {native, target} = S.settings, T = langName(target), N = langName(native), sc = SCENES[S.tutor.scene] || SCENES.free;
+  let extra = '';
+  if (S.tutor.scene === 'text') { const L = S.lessons.filter(l => l.lang === target).sort((a, b) => (b.opened || 0) - (a.opened || 0))[0]; if (L) extra = '\n\nThe text:\n' + L.sents.map(s => s.t).join(' ').slice(0, 2500); }
+  return `You are a warm, patient ${T} conversation tutor. The learner's native language is ${N} and their level is about ${myLevel()}. Scenario: ${sc[1]}.
+Rules: reply only in ${T}, in 1 to 3 short sentences suited to that level, and end with one question that keeps the conversation going. If the learner's latest message contains mistakes, add one final line that starts with "✎ " and gives the corrected sentence in ${T} followed by a very short explanation in ${N}. If there are no mistakes, leave that line out. Never use markdown.` + extra;
+}
+function splitReply(c) {
+  const lines = c.split('\n'), isFix = l => l.trim().startsWith('✎');
+  return {main: lines.filter(l => !isFix(l)).join(' ').replace(/\s+/g, ' ').trim(), fix: lines.filter(isFix).map(l => l.trim().replace(/^✎\s*/, '')).join(' ')};
+}
+function vTutor() {
+  if (!hasAI()) return needKey('Tutor');
+  const t = S.settings.target, tu = S.tutor;
+  const chat = tu.msgs.map((m, i) => {
+    if (m.role === 'user') return `<div class="bub u">${esc(m.content)}</div>`;
+    const {main, fix} = splitReply(m.content);
+    return `<div class="bub a"><div lang="${esc(t)}">${splitSents(main, t).map(s => `<span class="ts">${wordsHtml({t: s}, t)}</span>`).join(NOSPACE.has(t) ? '' : ' ')}</div>
+      ${m.tr ? `<div class="fix">${esc(m.tr)}</div>` : ''}${fix ? `<div class="fix">✎ ${esc(fix)}</div>` : ''}
+      <div class="tools"><button data-a="sayMsg" data-i="${i}">🔊 Listen</button>${m.tr ? '' : `<button data-a="trMsg" data-i="${i}">Translate</button>`}</div></div>`;
+  }).join('');
+  return `<div class="top"><h1 class="grow">Tutor</h1>
+      <button class="btn ${TU.auto ? 'on' : ''}" data-a="tutorAuto" aria-label="Read replies aloud">🔊 Auto</button><button class="btn" data-a="tutorNew">New chat</button></div>
+    <label class="f">Scenario<select id="t-scene">${Object.entries(SCENES).map(([k, v]) => `<option value="${k}" ${tu.scene === k ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></label>
+    <div class="chat">${chat || `<div class="empty">Practise ${esc(langName(t))} in conversation. Tap any word in a reply to look it up and save it. Mistakes are corrected gently after each reply.</div>`}
+      ${TU.busy ? '<div class="bub a muted">…</div>' : ''}</div>
+    ${tu.msgs.length || TU.busy ? '' : '<button class="btn primary" data-a="tutorStart" style="width:100%;margin-bottom:10px">Let the tutor start</button>'}
+    <div class="send"><input id="t-in" class="inp" style="margin:0" placeholder="Write in ${esc(langName(t))}…" value="${esc(TU.draft)}" autocomplete="off" enterkeyhint="send">
+      ${SR ? '<button class="btn" data-a="mic" aria-label="Speak">🎤</button>' : ''}<button class="btn primary" data-a="tutorSend" ${TU.busy ? 'disabled' : ''}>Send</button></div>`;
+}
+const chatEnd = () => { const el = $('#t-in'); if (el) el.scrollIntoView({block: 'end'}); };
+async function tutorSend(text) {
+  if (TU.busy) return;
+  const tu = S.tutor, t = S.settings.target;
+  if (text) tu.msgs.push({role: 'user', content: text});
+  TU.busy = true; TU.draft = ''; render(); chatEnd();
+  try {
+    const hist = tu.msgs.slice(-20).map(m => ({role: m.role, content: m.content}));
+    if (!hist.length || hist[0].role !== 'user') hist.unshift({role: 'user', content: '(Please start the conversation.)'});
+    const out = await ai([{role: 'system', content: tutorSystem()}, ...hist], {temp: 0.9, max: 500});
+    tu.msgs.push({role: 'assistant', content: out});
+    if (tu.msgs.length > 60) tu.msgs.splice(0, tu.msgs.length - 60);
+    const main = splitReply(out).main;
+    bump('read', sentWords(main, t).length); saveNow();
+    TU.busy = false;
+    if (view === 'tutor') { render(); chatEnd(); if (TU.auto) speak(main, t); }
+  } catch (e) { TU.busy = false; if (text) { tu.msgs.pop(); TU.draft = text; } if (view === 'tutor') render(); toast(e.message); }
+}
+
 /* ---------------- events ---------------- */
 const ACT = {
   go: el => go(el.dataset.v),
+  genStory,
+  tutorSend() { const el = $('#t-in'), v = el.value.trim(); if (v) tutorSend(v); },
+  tutorStart() { tutorSend(''); },
+  tutorNew() { stopSpeech(); S.tutor.msgs = []; saveNow(); render(); },
+  tutorAuto() { TU.auto = !TU.auto; if (!TU.auto) stopSpeech(); TU.draft = $('#t-in').value; render(); },
+  sayMsg(el) { const m = S.tutor.msgs[+el.dataset.i]; if (m) speak(splitReply(m.content).main, S.settings.target); },
+  async trMsg(el) { const m = S.tutor.msgs[+el.dataset.i]; if (!m) return; el.textContent = 'Translating…'; try { m.tr = await translate(splitReply(m.content).main, S.settings.target, S.settings.native); saveNow(); } catch (e) { toast(e.message); } if (view === 'tutor') { TU.draft = $('#t-in').value; render(); } },
+  mic() {
+    if (!SR) return; stopSpeech();
+    const r = new SR(); r.lang = langLocale(S.settings.target); r.interimResults = false;
+    r.onresult = e => { const el = $('#t-in'); if (el) { el.value = (el.value + ' ' + e.results[0][0].transcript).trim(); el.focus(); } };
+    r.onerror = e => toast(e.error === 'not-allowed' ? 'Microphone access was denied.' : 'Could not hear that — try again.');
+    try { r.start(); toast('Listening…'); } catch (e) {}
+  },
+  async explain() {
+    const sel = R.sel; if (!sel) return; const N = langName(S.settings.native), T = langName(sel.lang), ctx = sel.ctx || (dict(sel.lang)[sel.k] || {}).ctx || '';
+    sel.ex = 'Thinking…'; drawSheet();
+    try { sel.ex = await ai([{role: 'system', content: `You help a learner of ${T} whose native language is ${N}. In ${N}, in at most 60 words and without markdown, explain what the given word or phrase means in the given sentence, its dictionary form, and any grammar worth noticing.`}, {role: 'user', content: `Word: ${sel.surface}\nSentence: ${ctx || '(none)'}`}], {temp: 0.3, max: 300}); }
+    catch (e) { sel.ex = ''; toast(e.message); }
+    if (R.sel === sel) drawSheet();
+  },
+  async testAI() { try { const out = await ai([{role: 'user', content: 'Reply with the single word: OK'}], {temp: 0, max: 10}); toast('DeepSeek answered: ' + out.slice(0, 40)); } catch (e) { toast(e.message); } },
+  azLoad() { azVoices.all = null; azVoiceList(S.settings.target).then(l => { toast(l.length + ' Azure voices found for ' + langName(S.settings.target) + '.'); if (view === 'settings') render(); }).catch(e => toast(e.message)); },
   start() { const n = $('#w-native').value, t = $('#w-target').value; if (n === t) return toast('Choose two different languages.'); S.settings.native = n; S.settings.target = t; saveNow(); navigator.storage?.persist?.().catch(() => {}); go('home'); },
   open: el => openLesson(el.dataset.id),
   delLesson(el) { const L = S.lessons.find(l => l.id === el.dataset.id); if (L && confirm(`Delete “${L.title}”? Your words and statistics are kept.`)) { S.lessons = S.lessons.filter(l => l !== L); saveNow(); render(); } },
   libFilter(el) { LF.show = el.dataset.v; render(); },
-  addMode(el) { A.title = $('#a-title').value; A.text = $('#a-text').value; A.native = !!el.dataset.n; render(); },
+  addMode(el) { A.title = $('#a-title').value; A.text = $('#a-text').value; A.yt = ($('#a-yt') || {}).value || A.yt; A.native = !!el.dataset.n; render(); },
   create: createLesson,
   cancelCreate() { A.abort = true; },
   lines() { R.lines = !R.lines; closeSheet(); render(); if (P.playing) markSentence(P.i, true); },
   font(el) { S.settings.font = Math.max(14, Math.min(40, S.settings.font + +el.dataset.d)); applyFont(); save(); },
   finish: finishLesson,
-  toggle() { if (P.playing) { stopSpeech(); drawPlayer(); } else playFrom(P.i); },
+  toggle() { const L = cur(); if (P.playing) { stopSpeech(); drawPlayer(); } else if (videoMode(L) && Y.p.getPlayerState() === 2) Y.p.playVideo(); else playFrom(P.i); },
   prev() { P.playing ? playFrom(P.i - 1) : (P.i = Math.max(0, P.i - 1), markSentence(P.i, true), drawPlayer()); },
   next() { const n = cur().sents.length - 1; P.playing ? playFrom(P.i + 1) : (P.i = Math.min(n, P.i + 1), markSentence(P.i, true), drawPlayer()); },
   repeat() { P.repeat = !P.repeat; drawPlayer(); },
@@ -907,11 +1229,16 @@ const ACT = {
     if (!rows.length) return toast('No flashcards to export yet.');
     download(`storyglot-${t}-words.csv`, '﻿' + rows.join('\r\n'), 'text/csv'); },
   testVoice() { const t = S.settings.target; const L = S.lessons.find(l => l.lang === t); speak(L ? L.sents[0].t : langName(t), t); },
-  backup() { saveNow(); download(`storyglot-backup-${today()}.json`, JSON.stringify(S), 'application/json'); },
+  backup() { saveNow(); download(`storyglot-backup-${today()}.json`, JSON.stringify({...S, settings: {...S.settings, dsKey: '', azKey: '', ltKey: ''}}), 'application/json'); },   // keys never leave the device
   reset() { if (confirm('Erase all lessons, words and progress on this device? This cannot be undone.')) { S = DEFAULTS(); saveNow(); applyTheme(); go('welcome'); } }
 };
 document.addEventListener('click', e => {
   const w = e.target.closest('.w');
+  if (w && view === 'tutor') {
+    document.querySelectorAll('.w.sel').forEach(x => x.classList.remove('sel')); w.classList.add('sel');
+    openWord(S.settings.target, w.dataset.k, w.textContent, null, false, (w.closest('.ts') || w).textContent);
+    return;
+  }
   if (w && view === 'reader') {
     const sl = getSelection(); if (sl && !sl.isCollapsed) return;          // finishing a phrase selection, not a tap
     const L = cur(), s = w.closest('.s');
@@ -926,7 +1253,7 @@ document.addEventListener('click', e => {
 document.addEventListener('change', e => {
   const t = e.target, s = S.settings;
   switch (t.id) {
-    case 'p-rate': s.rate = +t.value; save(); if (P.playing) playFrom(P.i); break;
+    case 'p-rate': s.rate = +t.value; save(); if (videoMode(cur())) Y.p.setPlaybackRate(s.rate); else if (P.playing) playFrom(P.i); break;
     case 's-native': if (t.value === s.target) { toast('Choose two different languages.'); render(); break; } s.native = t.value; saveNow(); break;
     case 's-target': if (t.value === s.native) { toast('Choose two different languages.'); render(); break; } s.target = t.value; s.voice = ''; RV.active = false; saveNow(); render(); break;
     case 's-goal': s.goal = Math.max(50, Math.min(50000, Math.round(+t.value) || 1000)); save(); break;
@@ -938,21 +1265,30 @@ document.addEventListener('change', e => {
     case 's-email': s.email = t.value.trim(); save(); break;
     case 's-lturl': s.ltUrl = t.value.trim(); save(); break;
     case 's-ltkey': s.ltKey = t.value.trim(); save(); break;
+    case 's-dskey': s.dsKey = t.value.trim(); saveNow(); render(); break;
+    case 's-dsurl': s.dsUrl = t.value.trim() || 'https://api.deepseek.com'; save(); break;
+    case 's-dsmodel': s.dsModel = t.value.trim() || 'deepseek-chat'; save(); break;
+    case 's-tts': s.tts = t.value; P.azWarned = false; saveNow(); render(); break;
+    case 's-azkey': s.azKey = t.value.trim(); azVoices.all = null; P.azWarned = false; saveNow(); break;
+    case 's-azregion': s.azRegion = t.value.trim(); azVoices.all = null; P.azWarned = false; saveNow(); break;
+    case 's-azvoice': s.azVoice[s.target] = t.value; save(); break;
+    case 't-scene': S.tutor.scene = t.value; S.tutor.msgs = []; stopSpeech(); saveNow(); render(); break;
     case 'w-st': WF.st = t.value; refreshWords(); break;
     case 's-mean': if (R.sel) { const e2 = dict(R.sel.lang)[R.sel.k]; if (e2 && e2.added) { e2.tr = t.value.trim(); save(); refreshWords(); } else R.sel.tr = t.value.trim(); } break;
     case 'a-file': { const f = t.files[0]; if (!f) break;
-      const name = f.name.replace(/\.[^.]+$/, ''), keep = $('#a-title').value, epub = /\.epub$/i.test(f.name);
+      const name = f.name.replace(/\.[^.]+$/, ''), keep = $('#a-title').value, epub = /\.epub$/i.test(f.name); A.yt = ($('#a-yt') || {}).value || A.yt;
       (epub ? f.arrayBuffer().then(readEpub) : f.text().then(text => ({title: '', text})))
-        .then(b => { A.text = b.text; A.title = keep || b.title || name; if (epub) A.native = false; if (view === 'add') render(); })
+        .then(b => { A.text = b.text; A.title = keep || b.title || name; if (epub || /\.(srt|vtt)$/i.test(f.name)) A.native = false; if (view === 'add') render(); })
         .catch(err => toast('Could not open that file: ' + err.message));
       break; }
     case 's-import': { const f = t.files[0]; if (!f) break; f.text().then(txt => {
       try { const d = JSON.parse(txt); if (!d || !d.settings || !Array.isArray(d.lessons)) throw 0;
         if (!confirm('Replace everything on this device with this backup?')) return;
-        S = merge(d); saveNow(); applyTheme(); go('home'); toast('Backup restored.');
+        const {dsKey, azKey, ltKey} = S.settings; S = merge(d); Object.assign(S.settings, {dsKey: S.settings.dsKey || dsKey, azKey: S.settings.azKey || azKey, ltKey: S.settings.ltKey || ltKey}); saveNow(); applyTheme(); go('home'); toast('Backup restored.');
       } catch (err) { toast('That file is not a Storyglot backup.'); } }); break; }
   }
 });
+document.addEventListener('keydown', e => { if (e.target.id === 't-in' && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); ACT.tutorSend(); } });
 document.addEventListener('input', e => {
   if (e.target.id === 'w-q') { WF.q = e.target.value; refreshWords(); }
   if (e.target.id === 's-rate') $('#s-rate-v').textContent = (+e.target.value).toFixed(2).replace(/0$/, '') + '×';

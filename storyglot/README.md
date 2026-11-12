@@ -27,8 +27,41 @@ narration and tap the words you don't know.
 - **Words**: searchable vocabulary list, CSV export (for Anki etc.), full backup export/import.
 - Light and dark theme, 33 languages including Chinese, Japanese and Thai.
 
-Not included, because they need a paid AI service or a server: AI-generated stories, an AI
-conversation tutor, and automatic podcast/video transcripts.
+### AI, with your own key
+
+Add a DeepSeek API key in Settings to switch these on (the key is stored only on the device, is
+sent only to DeepSeek, and is left out of backups):
+
+- **Stories**: a story written for you in the language you are learning — pick a topic, a level
+  (A1–C2) and a length. It can weave in words from your flashcards so you meet them again.
+- **Tutor**: a conversation partner with role-plays (café, directions, shopping, interview) or a
+  chat about your last text. Replies are tappable like any lesson, can be read aloud, and your
+  mistakes are corrected after each message. Where the browser supports it you can dictate.
+- **Explain**: in the word panel, a short explanation of the word in its sentence.
+- **Translation**: with a key set, translation uses DeepSeek instead of the limited free service.
+
+**AI relay.** If the tablet's browser reports that it cannot reach the AI service even though the
+key is right, DeepSeek may be refusing direct browser requests. Put any OpenAI-compatible relay in
+front of it (for example a small Azure Function that forwards `/chat/completions`) and enter its
+address under Settings → AI → Service address.
+
+### YouTube videos
+
+Choose *My text is already in …*, paste the video link and paste the video's transcript (on
+youtube.com: open the description → *Show transcript* → select and copy; `.srt`/`.vtt` subtitle
+files work too). The video plays above the text, the current line is highlighted as it plays, and
+tapping ▶ on a line jumps the video there. The app cannot download a transcript by itself: YouTube
+does not allow that from a web page. The embedded video needs the app to be opened from a web
+address (options 1 or 2 below), not as a bare file.
+
+### Voices
+
+No extra app is needed: narration uses the tablet's own text-to-speech voices and works offline.
+For more natural voices, switch *Voice source* to **Azure neural voices** in Settings and enter the
+key and region of an Azure *Speech* resource (the free F0 tier covers about 500,000 characters a
+month). With Azure the sentence is highlighted but not the individual word.
+
+Not included: automatic podcast transcription.
 
 ## Put it on your tablet
 
@@ -48,7 +81,8 @@ The app is a single page (`index.html`). Pick whichever is easiest:
 
 ## What needs internet
 
-Only translation. Reading, narration, word tracking, review and statistics are local.
+Translation, the AI features, Azure voices and YouTube video. Reading, narration with the
+tablet's voices, word tracking, flashcards and statistics are local.
 Translation uses, in order: the browser's built-in on-device translator when it is installed
 (some desktop Chrome versions), otherwise the free [MyMemory](https://mymemory.translated.net/) API
 (about 5,000 characters a day; about 50,000 if you enter an email in Settings). You can point the
