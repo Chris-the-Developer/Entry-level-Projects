@@ -18,6 +18,8 @@
   --new:#d6e4ff; --g1:#8fdfab; --g2:#bdeecd; --g3:#e1f7e8; --speak:#ffe08a; --sent:#eeeef7;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Noto Serif",serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+  --sat:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));
+  --sab:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px));
 }
 :root[data-theme=dark]{
   --bg:#111219; --card:#1a1c26; --ink:#e9e9f2; --mute:#9a9db3; --line:#2b2e3d; --soft:#232534;
@@ -31,7 +33,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 h1{font:700 1.5rem var(--sans);margin:0;letter-spacing:-.01em}
 h2{font:600 1.05rem var(--sans);margin:0 0 .6rem}
-#main{max-width:880px;margin:0 auto;padding:18px 16px calc(96px + env(safe-area-inset-bottom))}
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:var(--sat);background:var(--bg);z-index:30}
+#main{max-width:880px;margin:0 auto;padding:calc(18px + var(--sat)) 16px calc(96px + var(--sab))}
 .top{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 .grow{flex:1;min-width:0}
 .pill{font-size:.8rem;padding:4px 10px;border-radius:99px;background:var(--soft);color:var(--mute);white-space:nowrap;border:0}
@@ -69,7 +72,7 @@ progress{width:100%;height:10px;accent-color:var(--accent)}
 .empty{text-align:center;padding:36px 16px;color:var(--mute)}
 
 /* reader */
-.readbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line);margin-bottom:8px}
+.readbar{position:sticky;top:var(--sat);z-index:5;background:var(--bg);padding:8px 0;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line);margin-bottom:8px}
 .readbar h1{font-size:1.05rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .readbar .btn{padding:6px 12px}
 #text{font-family:var(--serif);line-height:1.95;padding-bottom:40px}
@@ -85,13 +88,13 @@ progress{width:100%;height:10px;accent-color:var(--accent)}
 .mini{border:1px solid var(--line);background:var(--card);border-radius:50%;width:40px;height:40px;flex:none;font-size:.85rem}
 .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:.8rem;color:var(--mute);margin:4px 0 12px}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
-#player{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);padding:8px 12px calc(8px + env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
+#player{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);padding:8px 12px calc(8px + var(--sab));display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
 #player .btn{padding:8px 14px}
 #player .play{min-width:72px;font-size:1.1rem}
 #player select{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px;min-height:44px}
 
 /* word sheet */
-#sheet{position:fixed;z-index:20;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:14px 16px;max-height:60vh;overflow:auto}
+#sheet{position:fixed;z-index:20;left:0;right:0;bottom:calc(60px + var(--sab));background:var(--card);border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:14px 16px;max-height:60vh;overflow:auto}
 @media (min-width:1000px){#sheet{left:auto;right:16px;bottom:84px;width:390px;border:1px solid var(--line);border-radius:18px}}
 #sheet .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 #sheet .hd b{font:600 1.5rem var(--serif);flex:1;min-width:0;overflow-wrap:anywhere}
@@ -104,13 +107,13 @@ progress{width:100%;height:10px;accent-color:var(--accent)}
 .ctx small{display:block;font:italic .85rem var(--sans);color:var(--mute);margin-top:4px}
 
 /* navigation: bottom bar on narrow screens, side rail on wide ones */
-#tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:var(--sab)}
 #tabs button{flex:1;max-width:160px;border:0;background:none;padding:10px 4px;min-height:56px;font-size:.78rem;color:var(--mute);position:relative}
 #tabs button.on{color:var(--accent);font-weight:700}
 #tabs button svg{display:block;margin:0 auto 2px;width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .badge{position:absolute;top:6px;left:calc(50% + 8px);background:var(--danger);color:#fff;border-radius:99px;font-size:.7rem;padding:0 6px;line-height:1.5}
 @media (min-width:900px){
-  #tabs{right:auto;top:0;width:96px;flex-direction:column;justify-content:flex-start;gap:4px;border-top:0;border-right:1px solid var(--line);padding:18px 6px}
+  #tabs{right:auto;top:0;width:96px;flex-direction:column;justify-content:flex-start;gap:4px;border-top:0;border-right:1px solid var(--line);padding:calc(18px + var(--sat)) 6px 18px}
   #tabs button{flex:none;max-width:none;width:100%;border-radius:12px}
   #tabs button.on{background:var(--soft)}
   body.nav{padding-left:96px}
@@ -139,7 +142,7 @@ progress{width:100%;height:10px;accent-color:var(--accent)}
 .days i.a{background:var(--accent);color:var(--accent-ink);font-weight:700}
 .split{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--soft);margin:8px 0}
 .split i{display:block;height:100%}
-#video{position:sticky;top:0;z-index:6;background:#000;display:flex;justify-content:center}
+#video{position:sticky;top:var(--sat);z-index:6;background:#000;display:flex;justify-content:center}
 #video iframe,#ytp{width:min(100%,560px);aspect-ratio:16/9;height:auto;max-height:38vh;border:0}
 body.yt .readbar{position:static}
 .chat{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
@@ -162,6 +165,7 @@ body.yt .readbar{position:static}
 <nav id="tabs" hidden></nav>
 <div id="toast" hidden></div>
 
+<script src="capacitor.js"></script>
 <script>
 'use strict';
 /* ============ Storyglot — single-file language reader ============ */
@@ -189,6 +193,28 @@ const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const today = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const num = n => Math.round(n).toLocaleString();
+
+/* ---------------- Android app: native voice, network and files through Capacitor ---------------- */
+const CAP = self.Capacitor && self.capacitorExports && self.Capacitor.isNativePlatform && self.Capacitor.isNativePlatform() ? self.capacitorExports : null;
+const NAT = CAP ? {http: CAP.CapacitorHttp, tts: CAP.registerPlugin('TextToSpeech'), fs: CAP.registerPlugin('Filesystem'), app: CAP.registerPlugin('App')} : null;
+function b64Blob(b64, type) { const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new Blob([u8], {type}); }
+// fetch() for other sites. In the app the request is made by Android itself, so browser cross-origin rules do not apply.
+async function xfetch(url, opt = {}, type = 'text') {
+  if (!NAT) return fetch(url, opt);
+  const headers = {...(opt.headers || {})};
+  let data = opt.body;
+  if (typeof data === 'string' && /json/i.test(headers['Content-Type'] || '')) data = JSON.parse(data);
+  const r = await NAT.http.request({url: String(url), method: opt.method || 'GET', headers, ...(data === undefined ? {} : {data}), responseType: type, connectTimeout: 20000, readTimeout: 120000});
+  const d = r.data;
+  return {ok: r.status >= 200 && r.status < 300, status: r.status,
+    json: async () => typeof d === 'string' ? JSON.parse(d) : d,
+    text: async () => typeof d === 'string' ? d : JSON.stringify(d),
+    blob: async () => b64Blob(String(d), 'audio/mpeg')};
+}
+async function natWrite(path, data) {                     // shared Documents folder; the app's own folder if that is refused
+  try { await NAT.fs.writeFile({path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true}); return 'Documents/' + path; }
+  catch (e) { await NAT.fs.writeFile({path, data, directory: 'EXTERNAL', encoding: 'utf8', recursive: true}); return 'Android/data/com.storyglot.app/files/' + path; }
+}
 
 /* ---------------- state & storage (IndexedDB, falling back to localStorage) ---------------- */
 const DEFAULTS = () => ({
@@ -235,7 +261,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const api = (path, opt = {}) => fetch('api/' + path, {cache: 'no-store', ...opt, headers: {...(opt.headers || {}), 'X-App-Password': SV.pw}});
 const apiError = async r => { const j = await r.json().catch(() => ({})); return new Error((j.error && (j.error.message || j.error)) || 'Server error ' + r.status); };
 async function connect() {
-  if (!location.protocol.startsWith('http')) return;
+  if (NAT || !location.protocol.startsWith('http')) return;   // the Android app works on its own
   try {
     const r = await fetch('api/config', {cache: 'no-store', signal: AbortSignal.timeout(8000)});
     if (!r.ok) return;                                    // plain static hosting: no server features
@@ -391,7 +417,7 @@ async function myMemory(text, from, to) {
     u.searchParams.set('q', part.trim()); u.searchParams.set('langpair', mmCode(from) + '|' + mmCode(to));
     if (S.settings.email) u.searchParams.set('de', S.settings.email);
     let j;
-    try { const r = await fetch(u); j = await r.json(); }
+    try { const r = await xfetch(String(u)); j = await r.json(); }
     catch (e) { throw new Error(navigator.onLine === false ? 'You are offline — translation needs an internet connection.' : 'Could not reach the translation service.'); }
     const t = j && j.responseData && j.responseData.translatedText;
     const detail = String((j && j.responseDetails) || t || '');
@@ -409,7 +435,7 @@ async function libre(text, from, to) {
   if (!base) throw new Error('Set the LibreTranslate server address in Settings.');
   let r;
   try {
-    r = await fetch(base + '/translate', {method: 'POST', headers: {'Content-Type': 'application/json'},
+    r = await xfetch(base + '/translate', {method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({q: text, source: from, target: to, format: 'text', api_key: S.settings.ltKey || undefined})});
   } catch (e) { throw new Error('Could not reach the LibreTranslate server.'); }
   const j = await r.json().catch(() => ({}));
@@ -434,7 +460,7 @@ async function ai(messages, {json = false, temp = 1, max = 2000} = {}) {
   const base = (s.dsUrl || 'https://api.deepseek.com').trim().replace(/\/+$/, '');
   let r;
   try {
-    r = await fetch(base + '/chat/completions', {method: 'POST', headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + s.dsKey},
+    r = await xfetch(base + '/chat/completions', {method: 'POST', headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + s.dsKey},
       body: JSON.stringify({model: s.dsModel || 'deepseek-chat', messages, temperature: temp, max_tokens: max, ...(json ? {response_format: {type: 'json_object'}} : {})})});
   } catch (e) { throw new Error(navigator.onLine === false ? 'You are offline — the AI needs an internet connection.' : 'Could not reach the AI service from this browser. If this keeps happening, see “AI relay” in the README.'); }
   const j = await r.json().catch(() => ({}));
@@ -468,10 +494,14 @@ async function translate(text, from, to) {
 }
 
 /* ---------------- speech ---------------- */
-const TTS = 'speechSynthesis' in self && 'SpeechSynthesisUtterance' in self;
-let voices = [];
-function loadVoices() { voices = TTS ? speechSynthesis.getVoices() : []; }
-if (TTS) { loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', () => { loadVoices(); if (view === 'settings') render(); }); }
+const TTS = !!NAT || ('speechSynthesis' in self && 'SpeechSynthesisUtterance' in self);
+let voices = [], natRange = null;
+function loadVoices() {
+  if (NAT) { NAT.tts.getSupportedVoices().then(r => { voices = ((r && r.voices) || []).map((v, idx) => ({...v, idx})); if (view === 'settings') render(); }).catch(() => {}); return; }
+  voices = TTS ? speechSynthesis.getVoices() : [];
+}
+if (NAT) { loadVoices(); NAT.tts.addListener('onRangeStart', e => { if (natRange) natRange(e); }); }
+else if (TTS) { loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', () => { loadVoices(); if (view === 'settings') render(); }); }
 const pre = lang => langLocale(lang).split('-')[0].toLowerCase();
 const voicesFor = lang => voices.filter(v => { const x = v.lang.replace('_', '-').toLowerCase(); return x.startsWith(lang) || x.startsWith(pre(lang)); });
 function pickVoice(lang) {
@@ -488,7 +518,7 @@ const azHost = () => `https://${S.settings.azRegion.trim().toLowerCase().replace
 async function azVoiceList(lang) {
   if (!azVoices.all) {
     let r;
-    try { r = azServer() ? await api('tts/voices') : await fetch(azHost() + '/voices/list', {headers: {'Ocp-Apim-Subscription-Key': S.settings.azKey}}); }
+    try { r = azServer() ? await api('tts/voices') : await xfetch(azHost() + '/voices/list', {headers: {'Ocp-Apim-Subscription-Key': S.settings.azKey}}); }
     catch (e) { throw new Error('Could not reach Azure Speech — check the region and your connection.'); }
     if (!r.ok && azServer()) throw await apiError(r);
     if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Azure rejected the Speech key or region.' : 'Azure Speech error ' + r.status + '.');
@@ -504,9 +534,9 @@ async function azFetch(text, lang) {
   let r;
   try {
     r = azServer() ? await api('tts', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text, voice: v.ShortName, locale: v.Locale})})
-    : await fetch(azHost() + '/v1', {method: 'POST',
+    : await xfetch(azHost() + '/v1', {method: 'POST',
       headers: {'Ocp-Apim-Subscription-Key': S.settings.azKey, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3'},
-      body: `<speak version="1.0" xml:lang="${v.Locale}"><voice name="${v.ShortName}">${esc(text)}</voice></speak>`});
+      body: `<speak version="1.0" xml:lang="${v.Locale}"><voice name="${v.ShortName}">${esc(text)}</voice></speak>`}, 'blob');
   } catch (e) { throw new Error('Could not reach Azure Speech.'); }
   if (!r.ok && azServer()) throw await apiError(r);
   if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Azure rejected the Speech key or region.' : r.status === 429 ? 'Azure Speech quota reached.' : 'Azure Speech error ' + r.status + '.');
@@ -515,8 +545,22 @@ async function azFetch(text, lang) {
   azCache.set(k, url);
   return url;
 }
-function haltAudio() { if (TTS) speechSynthesis.cancel(); AUD.onended = AUD.onerror = null; AUD.pause(); }
+function haltAudio() { if (NAT) NAT.tts.stop().catch(() => {}); else if (TTS) speechSynthesis.cancel(); AUD.onended = AUD.onerror = null; AUD.pause(); }
+function natSpeak(my, text, lang, o, retried) {          // Android's own text-to-speech engine (Samsung, Google, …)
+  const v = voicesFor(lang).find(x => x.voiceURI === S.settings.voice);
+  natRange = e => { if (my === P.tok && o.onboundary) o.onboundary({charIndex: e.start}); };
+  NAT.tts.speak({text, lang: v ? v.lang : langLocale(lang), rate: o.rate || S.settings.rate, pitch: 1, volume: 1, queueStrategy: 0, ...(v ? {voice: v.idx} : {})})
+    .then(() => { if (my === P.tok && o.onend) o.onend(); })
+    .catch(e => {
+      if (my !== P.tok) return;
+      const msg = String((e && e.message) || '');
+      if (!retried && /initialized/i.test(msg)) { setTimeout(() => { if (my === P.tok) natSpeak(my, text, lang, o, true); }, 900); return; }   // engine still starting
+      const err = new Error(/not supported/i.test(msg) ? `No ${langName(lang)} voice is installed on this tablet. Open Settings → Voice → “Install voice data”.` : 'The tablet\'s text-to-speech could not read this.');
+      if (o.onerror) o.onerror(err); else toast(err.message);
+    });
+}
 function deviceSpeak(my, text, lang, {rate, onend, onboundary, onerror} = {}) {
+  if (NAT) return natSpeak(my, text, lang, {rate, onend, onboundary, onerror});
   if (!TTS) { toast('This browser has no text-to-speech.'); return; }
   const u = new SpeechSynthesisUtterance(text), v = pickVoice(lang);
   u.lang = v ? v.lang : langLocale(lang); if (v) u.voice = v;
@@ -561,7 +605,7 @@ function playFrom(i) {
   speak(L.sents[i].t, L.lang, {
     onboundary: e => markSpoken(i, e.charIndex),
     onend: () => { bump('heard', sentWords(L.sents[i].t, L.lang).length); if (L.pos !== i) { L.pos = i; save(); } playFrom(P.repeat ? i : i + 1); },
-    onerror: () => { stopSpeech(); drawPlayer(); toast('Audio playback failed on this device.'); }
+    onerror: e => { stopSpeech(); drawPlayer(); toast((e && e.message) || 'Audio playback failed on this device.'); }
   });
   if (useAzure() && L.sents[i + 1]) azFetch(L.sents[i + 1].t, L.lang).catch(() => {});   // warm up the next sentence
 }
@@ -609,6 +653,42 @@ function ytTick() {
   if (P.repeat && i === P.i + 1) { Y.p.seekTo(L.sents[P.i].at, true); return; }
   if (i === P.i + 1) bump('heard', sentWords(L.sents[P.i].t, L.lang).length);
   P.i = i; L.pos = i; save(); markSentence(i, true); drawPlayer();
+}
+// Android app: ask YouTube for the captions directly from the tablet. Best effort — YouTube changes this from time to time.
+async function ytTranscript(id, lang) {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+  const fail = () => new Error('YouTube did not hand over the transcript. Paste it instead.');
+  let page;
+  try { page = await (await xfetch('https://www.youtube.com/watch?v=' + id, {headers: {'User-Agent': UA, 'Accept-Language': 'en', Cookie: 'CONSENT=YES+1; SOCS=CAI'}})).text(); }
+  catch (e) { throw new Error('Could not reach YouTube — check the internet connection.'); }
+  const key = (page.match(/"INNERTUBE_API_KEY":"([^"]+)"/) || [])[1];
+  let tracks = null, title = '';
+  if (key) {
+    try {
+      const j = await (await xfetch('https://www.youtube.com/youtubei/v1/player?key=' + key, {method: 'POST',
+        headers: {'Content-Type': 'application/json', 'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)'},
+        body: JSON.stringify({context: {client: {clientName: 'ANDROID', clientVersion: '20.10.38', androidSdkVersion: 34}}, videoId: id})})).json();
+      tracks = j.captions && j.captions.playerCaptionsTracklistRenderer && j.captions.playerCaptionsTracklistRenderer.captionTracks;
+      title = (j.videoDetails && j.videoDetails.title) || '';
+    } catch (e) { /* fall back to the page data */ }
+  }
+  if (!tracks) { const m = page.match(/"captionTracks":(\[.*?\])/); if (m) try { tracks = JSON.parse(m[1]); } catch (e) {} }
+  if (!title) title = decodeEntities(((page.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || '').replace(/ - YouTube$/, '').trim());
+  if (!tracks || !tracks.length) throw new Error('No captions were found for this video. Paste the transcript instead.');
+  const score = t => (String(t.languageCode || '').toLowerCase().startsWith(pre(lang)) ? 2 : 0) + (t.kind === 'asr' ? 0 : 1);
+  const t = tracks.slice().sort((a, b) => score(b) - score(a))[0];
+  let raw;
+  try { raw = await (await xfetch(String(t.baseUrl).replace(/&fmt=[^&]*/, '') + '&fmt=json3', {headers: {'User-Agent': UA}})).text(); } catch (e) { throw fail(); }
+  const clean = x => decodeEntities(decodeEntities(x).replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+  let cues = [];
+  try { cues = JSON.parse(raw).events.filter(e => e.segs).map(e => ({t: (e.tStartMs || 0) / 1000, text: e.segs.map(x => x.utf8 || '').join('').replace(/\s+/g, ' ').trim()})); }
+  catch (e) {
+    for (const m of raw.matchAll(/<text start="([\d.]+)"[^>]*>([\s\S]*?)<\/text>/g)) cues.push({t: +m[1], text: clean(m[2])});
+    if (!cues.length) for (const m of raw.matchAll(/<p t="(\d+)"[^>]*>([\s\S]*?)<\/p>/g)) cues.push({t: +m[1] / 1000, text: clean(m[2])});
+  }
+  cues = cues.filter(c => c.text);
+  if (!cues.length) throw fail();
+  return {title, lang: t.languageCode || '', cues};
 }
 // Transcript with timestamps (copied from YouTube, or .srt/.vtt) -> [{t: seconds, text}]
 function parseCues(text) {
@@ -667,7 +747,7 @@ const LF = {show: 'all'};                             // library filter
 const cur = () => S.lessons.find(l => l.id === R.id);
 let toastTimer;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 4500); }
-function go(v) { if (view === 'reader' && v !== 'reader') { stopSpeech(); closeSheet(); } view = v; render(); scrollTo(0, 0); }
+function go(v) { if (view === 'reader' && v !== 'reader') { stopSpeech(); closeSheet(); } if (v === 'settings' && NAT && !voices.length) loadVoices(); view = v; render(); scrollTo(0, 0); }
 function applyTheme() {
   const t = S.settings.theme;
   document.documentElement.dataset.theme = t === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t;
@@ -774,11 +854,11 @@ function vAdd() {
       <button data-a="addMode" data-n="" class="${A.native ? '' : 'on'}">My text is already in ${esc(t)}</button></div>
     <label class="f">Title<input id="a-title" maxlength="120" placeholder="Optional" value="${esc(A.title)}"></label>
     ${A.native ? '' : `<label class="f">YouTube link (optional)<input id="a-yt" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" value="${esc(A.yt)}"></label>
-    <p class="muted" style="margin-top:-6px">${SV.on ? 'Leave the text empty and the transcript is fetched for you. If YouTube refuses, paste it yourself: ' : 'For a video, paste its transcript below: '} on youtube.com open the video description, choose “Show transcript”, then select and copy the lines. Keep the timestamps — they sync the text with the video.</p>`}
+    <p class="muted" style="margin-top:-6px">${SV.on || NAT ? 'Leave the text empty and the transcript is fetched for you. If YouTube refuses, paste it yourself: ' : 'For a video, paste its transcript below: '} on youtube.com open the video description, choose “Show transcript”, then select and copy the lines. Keep the timestamps — they sync the text with the video.</p>`}
     <label class="f">Text<textarea id="a-text" placeholder="Paste or type your text here…">${esc(A.text)}</textarea></label>
     <div class="row">
       <button class="btn primary" data-a="create" ${A.busy ? 'disabled' : ''}>${A.native ? 'Translate &amp; create lesson' : 'Create lesson'}</button>
-      <label class="btn" style="display:inline-flex;align-items:center">Open a file (.txt, .epub, .srt, .vtt)<input type="file" id="a-file" accept=".txt,.epub,.srt,.vtt,text/plain,application/epub+zip" hidden></label>
+      <label class="btn" style="display:inline-flex;align-items:center">Open a file (.txt, .epub, .srt, .vtt)<input type="file" id="a-file" ${NAT ? '' : 'accept=".txt,.epub,.srt,.vtt,text/plain,application/epub+zip"'} hidden></label>
     </div>
     ${A.busy && !A.native ? '<p class="muted">Fetching the transcript…</p>' : ''}
     ${A.busy && A.native ? `<div style="margin-top:14px"><progress max="${A.total}" value="${A.done}"></progress>
@@ -970,12 +1050,12 @@ async function createLesson() {
   A.title = title; A.text = text; A.yt = ($('#a-yt') || {}).value || '';
   const {native, target} = S.settings, extra = {};
   let sents;
-  if (!A.native && !text && ytId(A.yt) && SV.on) {        // let the server fetch the video's transcript
+  if (!A.native && !text && ytId(A.yt) && (SV.on || NAT)) {   // fetch the video's transcript (server, or the tablet itself in the app)
     A.busy = true; render();
     try {
-      const r = await api('youtube?id=' + ytId(A.yt) + '&lang=' + target);
-      if (!r.ok) throw await apiError(r);
-      const j = await r.json();
+      let j;
+      if (NAT) j = await ytTranscript(ytId(A.yt), target);
+      else { const r = await api('youtube?id=' + ytId(A.yt) + '&lang=' + target); if (!r.ok) throw await apiError(r); j = await r.json(); }
       const vid = ytId(A.yt); A.busy = false; A.title = A.text = A.yt = '';
       if (j.lang && !j.lang.toLowerCase().startsWith(pre(target)) && !j.lang.toLowerCase().startsWith(target)) toast(`This video only has captions in “${j.lang}”, not ${langName(target)}.`);
       return addLessons(title || j.title, cuesToSents(j.cues, target), {yt: vid});
@@ -1157,8 +1237,10 @@ function vSettings() {
     <div class="row" style="margin-bottom:12px"><button class="btn" data-a="azLoad">${azVoices.all ? 'Reload voices' : azServer() ? 'Choose a voice' : 'Check key &amp; load voices'}</button></div>
     <p class="muted">${azServer() ? '' : 'Create a “Speech” resource in the Azure portal and copy its key and region here. '}The text being read is sent to Azure; if it cannot be reached, the tablet's own voice is used.</p>`
     : !TTS ? '<p class="muted">This browser does not support text-to-speech.</p>' : `
-    <label class="f">${esc(langName(s.target))} voice<select id="s-voice"><option value="">Automatic</option>${vs.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI === s.voice ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})${v.localService ? ' · offline' : ''}</option>`).join('')}</select></label>
-    ${vs.length ? '' : `<p class="muted">No ${esc(langName(s.target))} voice was found. Install one in your tablet's settings (Android: Settings → Accessibility → Text-to-speech → install voice data; iPad: Settings → Accessibility → Spoken Content → Voices), then reopen the app.</p>`}`}
+    <label class="f">${esc(langName(s.target))} voice<select id="s-voice"><option value="">Automatic</option>${vs.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI === s.voice ? 'selected' : ''}>${esc(NAT ? v.voiceURI : v.name)} (${esc(v.lang)})${v.localService ? ' · offline' : ''}</option>`).join('')}</select></label>
+    ${NAT ? `<p class="muted">${vs.length ? '' : `No ${esc(langName(s.target))} voice was found yet. `}Voices come from the tablet's text-to-speech engine (on Samsung: Settings → General management → Text-to-speech; “Speech Recognition &amp; Synthesis from Google” has the most languages).</p>
+    <div class="row" style="margin-bottom:12px"><button class="btn" data-a="ttsInstall">Install voice data</button><button class="btn" data-a="ttsReload">Refresh voices</button></div>`
+    : vs.length ? '' : `<p class="muted">No ${esc(langName(s.target))} voice was found. Install one in your tablet's settings (Android: Settings → Accessibility → Text-to-speech → install voice data; iPad: Settings → Accessibility → Spoken Content → Voices), then reopen the app.</p>`}`}
     <label class="f">Speed: <span id="s-rate-v">${s.rate}×</span><input id="s-rate" type="range" min="0.5" max="1.5" step="0.05" value="${s.rate}"></label>
     <button class="btn" data-a="testVoice">Test voice</button></div>
   <div class="card"><h2>Translation</h2>
@@ -1172,12 +1254,24 @@ function vSettings() {
     : s.provider === 'deepseek' ? '<p class="muted" style="margin:0">Text you translate is sent to DeepSeek.</p>'
     : `<label class="f">Email for MyMemory (optional)<input id="s-email" type="email" value="${esc(s.email)}" placeholder="raises the free limit from ~5,000 to ~50,000 characters a day"></label>
       <p class="muted" style="margin:0">Text you translate is sent to mymemory.translated.net${s.email ? ' together with this email address' : ''}. Reading, audio, word tracking and flashcards work offline.</p>`}</div>
-  <div class="card"><h2>Your data</h2><p class="muted" style="margin-top:0">${SV.on ? 'Progress is saved on this tablet and on your server, which also keeps a backup for each of the last 7 days.' : 'Everything is stored only on this device, in this browser.'}</p>
+  <div class="card"><h2>Your data</h2><p class="muted" style="margin-top:0">${SV.on ? 'Progress is saved on this tablet and on your server, which also keeps a backup for each of the last 7 days.' : NAT ? 'Progress is stored inside the app on this tablet. Each day you use it, a backup copy is also written to Documents/Storyglot (the five most recent are kept), so it can be restored with “Import backup” even after reinstalling. API keys are not included in backups.' : 'Everything is stored only on this device, in this browser.'}</p>
     <div class="row"><button class="btn" data-a="backup">Export backup</button>
-      <label class="btn" style="display:inline-flex;align-items:center">Import backup<input type="file" id="s-import" accept=".json,application/json" hidden></label>
+      <label class="btn" style="display:inline-flex;align-items:center">Import backup<input type="file" id="s-import" ${NAT ? '' : 'accept=".json,application/json"'} hidden></label>
       <button class="btn danger" data-a="reset">Erase everything</button></div></div>`;
 }
+const backupJson = () => JSON.stringify({...S, settings: {...S.settings, dsKey: '', azKey: '', ltKey: ''}});   // keys never leave the device
+let lastAuto = 0;
+function autoBackup() {                                   // Android app: keep a dated copy in Documents/Storyglot, newest five
+  if (!NAT || !S.settings.target || S.sync.mtime <= lastAuto) return;
+  lastAuto = S.sync.mtime;
+  natWrite(`Storyglot/storyglot-auto-${today()}.json`, backupJson()).then(async () => {
+    const r = await NAT.fs.readdir({path: 'Storyglot', directory: 'DOCUMENTS'});
+    const old = r.files.map(f => f.name).filter(n => /^storyglot-auto-\d{4}-\d\d-\d\d\.json$/.test(n)).sort().slice(0, -5);
+    for (const n of old) await NAT.fs.deleteFile({path: 'Storyglot/' + n, directory: 'DOCUMENTS'}).catch(() => {});
+  }).catch(() => {});
+}
 function download(name, text, type) {
+  if (NAT) { natWrite('Storyglot/' + name, text).then(where => toast('Saved to ' + where), e => toast('Could not save the file: ' + ((e && e.message) || 'unknown error'))); return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
@@ -1284,6 +1378,8 @@ async function tutorSend(text) {
 const ACT = {
   go: el => go(el.dataset.v),
   genStory,
+  ttsInstall() { NAT.tts.openInstall().catch(() => toast('Open the tablet\'s Settings → General management → Text-to-speech to add voices.')); },
+  ttsReload() { loadVoices(); toast('Checking the tablet\'s voices…'); },
   async login() {
     SV.pw = $('#l-pw').value;
     let r; try { r = await api('login', {method: 'POST'}); } catch (e) { return toast('Could not reach the server.'); }
@@ -1347,7 +1443,7 @@ const ACT = {
     if (!rows.length) return toast('No flashcards to export yet.');
     download(`storyglot-${t}-words.csv`, '﻿' + rows.join('\r\n'), 'text/csv'); },
   testVoice() { const t = S.settings.target; const L = S.lessons.find(l => l.lang === t); speak(L ? L.sents[0].t : langName(t), t); },
-  backup() { saveNow(); download(`storyglot-backup-${today()}.json`, JSON.stringify({...S, settings: {...S.settings, dsKey: '', azKey: '', ltKey: ''}}), 'application/json'); },   // keys never leave the device
+  backup() { saveNow(); download(`storyglot-backup-${today()}.json`, backupJson(), 'application/json'); },
   reset() { if (confirm('Erase all lessons, words and progress on this device? This cannot be undone.')) { S = DEFAULTS(); saveNow(); applyTheme(); go('welcome'); } }
 };
 document.addEventListener('click', e => {
@@ -1415,7 +1511,17 @@ document.addEventListener('input', e => {
 
 /* ---------------- boot ---------------- */
 load().then(() => { applyTheme(); render(); return connect(); }).then(() => render());
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+if (NAT) {
+  NAT.app.addListener('backButton', () => {                // hardware / gesture back
+    if (R.sel) closeSheet();
+    else if (view === 'reader' || view === 'add' || view === 'story') go('library');
+    else if (view === 'words') go('review');
+    else if (view !== 'home' && view !== 'welcome' && view !== 'login') go('home');
+    else NAT.app.minimizeApp();
+  });
+  NAT.app.addListener('pause', () => { if (saveTimer) saveNow(); autoBackup(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) autoBackup(); });
+} else if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>

@@ -15,9 +15,9 @@
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 
 const PORT = process.env.PORT || 8080;
-const ROOT = __dirname;
+const ROOT = path.join(__dirname, 'www');
 const HOSTED = !!process.env.WEBSITE_SITE_NAME;                       // set by Azure App Service
-const DATA = process.env.DATA_DIR || (HOSTED ? '/home/storyglot-data' : path.join(ROOT, 'data'));   // /home persists on App Service
+const DATA = process.env.DATA_DIR || (HOSTED ? '/home/storyglot-data' : path.join(__dirname, 'data'));   // /home persists on App Service
 const PW = process.env.APP_PASSWORD || '';
 const DS_KEY = process.env.DEEPSEEK_API_KEY || '';
 const DS_URL = (process.env.DEEPSEEK_URL || 'https://api.deepseek.com').replace(/\/+$/, '');
@@ -29,7 +29,7 @@ const LOCKED = HOSTED && !PW;                                         // never e
 
 const STATIC = {
   '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'],
-  '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'], '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'],
+  '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'], '/capacitor.js': ['capacitor.js', 'text/javascript; charset=utf-8'], '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'],
   '/icon.svg': ['icon.svg', 'image/svg+xml'], '/icon-192.png': ['icon-192.png', 'image/png'], '/icon-512.png': ['icon-512.png', 'image/png']
 };
 
