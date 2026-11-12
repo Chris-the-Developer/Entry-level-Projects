@@ -1,0 +1,8 @@
+{
+  "appId": "com.storyglot.app",
+  "appName": "Storyglot",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#f6f6fb"
+  }
+}

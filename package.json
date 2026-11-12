@@ -1,0 +1,11 @@
+{
+  "name": "entry-level-projects",
+  "private": true,
+  "description": "Root manifest so a host such as Azure App Service starts the Storyglot server.",
+  "scripts": {
+    "start": "node storyglot/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
