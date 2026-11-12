@@ -4,9 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Storyglot</title>
-<meta name="description" content="Read, listen and learn a language from any text.">
-<meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#16181c" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Learn a language through reading and listening to texts you choose.">
+<meta name="theme-color" content="#5b5bd6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
@@ -14,119 +13,133 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{
-  --bg:#f6f1e7; --card:#fffdf8; --ink:#23201a; --mute:#756d5f; --line:#e2d9c8;
-  --accent:#1f6f5c; --accent-ink:#fff; --danger:#b3402e;
-  --new:#cfe3ff; --l1:#ffd766; --l2:#ffe699; --l3:#fff3cc; --speak:#bfe8d6; --sent:#efe7d6;
+  --bg:#f6f6fb; --card:#ffffff; --ink:#1c1d2b; --mute:#696d84; --line:#e3e4ee; --soft:#eeeef7;
+  --accent:#5b5bd6; --accent-ink:#fff; --danger:#c2412d; --ok:#1f9d57;
+  --new:#d6e4ff; --g1:#8fdfab; --g2:#bdeecd; --g3:#e1f7e8; --speak:#ffe08a; --sent:#eeeef7;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Noto Serif",serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
 }
-@media (prefers-color-scheme: dark){:root{
-  --bg:#16181c; --card:#1f2228; --ink:#ece7dc; --mute:#9a9486; --line:#33373f;
-  --accent:#5cc2a6; --accent-ink:#0d1f1a; --danger:#ef8a78;
-  --new:#234a7a; --l1:#7a5c00; --l2:#5c4708; --l3:#40340f; --speak:#1f5a48; --sent:#262a31;
-}}
+:root[data-theme=dark]{
+  --bg:#111219; --card:#1a1c26; --ink:#e9e9f2; --mute:#9a9db3; --line:#2b2e3d; --soft:#232534;
+  --accent:#9494f7; --accent-ink:#111219; --danger:#f08a76; --ok:#5fd08f;
+  --new:#27407a; --g1:#1f7043; --g2:#1a5032; --g3:#173826; --speak:#7a5c00; --sent:#232534;
+}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--sans);-webkit-tap-highlight-color:transparent}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
-h1{font:600 1.5rem var(--serif);margin:0}
+h1{font:700 1.5rem var(--sans);margin:0;letter-spacing:-.01em}
 h2{font:600 1.05rem var(--sans);margin:0 0 .6rem}
-#main{max-width:860px;margin:0 auto;padding:16px 16px calc(96px + env(safe-area-inset-bottom))}
-.top{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.top .grow{flex:1;min-width:0}
-.pill{font-size:.8rem;padding:3px 10px;border-radius:99px;background:var(--sent);color:var(--mute);white-space:nowrap}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
-.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 16px;min-height:44px}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+#main{max-width:880px;margin:0 auto;padding:18px 16px calc(96px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.pill{font-size:.8rem;padding:4px 10px;border-radius:99px;background:var(--soft);color:var(--mute);white-space:nowrap;border:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 16px;min-height:44px}
+.btn.primary,.btn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
 .btn.danger{color:var(--danger)}
-.btn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn:disabled{opacity:.5}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .muted{color:var(--mute);font-size:.9rem}
 label.f{display:block;margin:0 0 12px;font-size:.9rem;color:var(--mute)}
-label.f>input,label.f>select,label.f>textarea{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:1rem}
+label.f>input,label.f>select,label.f>textarea,.inp{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font-size:1rem;min-height:44px}
+label.chk{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:.95rem}
+label.chk input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
 textarea{min-height:220px;resize:vertical;font-family:var(--serif)!important;line-height:1.5}
-.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px}
-.seg button{flex:1;border:0;background:var(--card);padding:10px;min-height:44px}
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px;background:var(--card)}
+.seg button{flex:1;border:0;background:none;padding:10px;min-height:44px}
 .seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
-.banner{background:var(--l3);border:1px solid var(--l1);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.9rem}
+.banner{background:var(--g3);border:1px solid var(--g1);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:.9rem}
+progress{width:100%;height:10px;accent-color:var(--accent)}
+.meter{height:10px;border-radius:5px;background:var(--soft);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:5px}
 
-/* library */
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px}
-.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-.tile b{display:block;font:600 1.5rem var(--serif)}
+/* home + library */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.tile b{display:block;font:700 1.6rem var(--sans);letter-spacing:-.02em}
 .tile span{font-size:.8rem;color:var(--mute)}
+.goal b{font:700 2rem var(--sans);letter-spacing:-.02em}
 .lesson{display:flex;gap:12px;align-items:center;cursor:pointer}
-.lesson h3{margin:0 0 2px;font:600 1.1rem var(--serif);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lesson .grow{flex:1;min-width:0}
-.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:8px;display:flex}
+.lesson h3{margin:0 0 2px;font:600 1.05rem var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:6px;border-radius:3px;background:var(--soft);overflow:hidden;margin-top:8px;display:flex}
 .bar i{display:block;height:100%}
-.bar .k{background:var(--accent)} .bar .l{background:var(--l1)} .bar .n{background:var(--new)}
-.empty{text-align:center;padding:40px 16px;color:var(--mute)}
+.bar .k{background:var(--accent)} .bar .l{background:var(--g1)} .bar .n{background:var(--new)}
+.empty{text-align:center;padding:36px 16px;color:var(--mute)}
 
 /* reader */
 .readbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line);margin-bottom:8px}
-.readbar h1{font-size:1.1rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.readbar h1{font-size:1.05rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .readbar .btn{padding:6px 12px}
-#text{font-family:var(--serif);line-height:1.9;padding-bottom:40px}
+#text{font-family:var(--serif);line-height:1.95;padding-bottom:40px}
 #text p{margin:0 0 1em}
-.s{border-radius:4px}
+.s{border-radius:5px}
 .s.cur,.line.cur .lt{background:var(--sent)}
-.w{border-radius:4px;padding:1px 1px;cursor:pointer}
-.w.st0{background:var(--new)} .w.st1{background:var(--l1)} .w.st2{background:var(--l2)} .w.st3{background:var(--l3)}
+.w{border-radius:5px;padding:1px 1px;cursor:pointer}
+.w.st0{background:var(--new)} .w.st1{background:var(--g1)} .w.st2{background:var(--g2)} .w.st3{background:var(--g3)}
 .w.sp{background:var(--speak)!important}
 .w.sel{outline:2px solid var(--accent)}
 .line{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
-.line .lt{border-radius:4px}
 .line .tr{font:italic .8em/1.5 var(--sans);color:var(--mute);margin-top:2px;cursor:pointer}
-.mini{border:1px solid var(--line);background:var(--card);border-radius:50%;width:38px;height:38px;flex:none;font-size:.8rem}
+.mini{border:1px solid var(--line);background:var(--card);border-radius:50%;width:40px;height:40px;flex:none;font-size:.85rem}
 .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:.8rem;color:var(--mute);margin:4px 0 12px}
-.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
 #player{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);padding:8px 12px calc(8px + env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
 #player .btn{padding:8px 14px}
 #player .play{min-width:72px;font-size:1.1rem}
-#player select{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px;min-height:44px}
+#player select{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px;min-height:44px}
 
 /* word sheet */
-#sheet{position:fixed;z-index:20;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:14px 16px;max-height:60vh;overflow:auto}
-@media (min-width:1000px){#sheet{left:auto;right:16px;bottom:84px;width:380px;border:1px solid var(--line);border-radius:16px}}
+#sheet{position:fixed;z-index:20;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:14px 16px;max-height:60vh;overflow:auto}
+@media (min-width:1000px){#sheet{left:auto;right:16px;bottom:84px;width:390px;border:1px solid var(--line);border-radius:18px}}
 #sheet .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 #sheet .hd b{font:600 1.5rem var(--serif);flex:1;min-width:0;overflow-wrap:anywhere}
-#sheet input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:1.05rem;margin-bottom:10px}
+#sheet input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:1.05rem;margin-bottom:10px}
 .status{display:flex;gap:6px;margin-bottom:10px}
-.status button{flex:1;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:4px;background:var(--card);font-size:.8rem}
-.status .b1{background:var(--l1)} .status .b2{background:var(--l2)} .status .b3{background:var(--l3)}
+.status button{flex:1;border:1px solid var(--line);border-radius:12px;min-height:44px;padding:4px;background:var(--card);font-size:.8rem}
+.status .b1{background:var(--g1)} .status .b2{background:var(--g2)} .status .b3{background:var(--g3)}
 .status button.on{outline:3px solid var(--accent);font-weight:700}
 .ctx{font:1rem/1.5 var(--serif);border-left:3px solid var(--line);padding-left:10px;margin:8px 0}
 .ctx small{display:block;font:italic .85rem var(--sans);color:var(--mute);margin-top:4px}
 
-/* tabs */
+/* navigation: bottom bar on narrow screens, side rail on wide ones */
 #tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
-#tabs button{flex:1;max-width:160px;border:0;background:none;padding:10px 4px;min-height:56px;font-size:.8rem;color:var(--mute);position:relative}
+#tabs button{flex:1;max-width:160px;border:0;background:none;padding:10px 4px;min-height:56px;font-size:.78rem;color:var(--mute);position:relative}
 #tabs button.on{color:var(--accent);font-weight:700}
 #tabs button svg{display:block;margin:0 auto 2px;width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .badge{position:absolute;top:6px;left:calc(50% + 8px);background:var(--danger);color:#fff;border-radius:99px;font-size:.7rem;padding:0 6px;line-height:1.5}
+@media (min-width:900px){
+  #tabs{right:auto;top:0;width:96px;flex-direction:column;justify-content:flex-start;gap:4px;border-top:0;border-right:1px solid var(--line);padding:18px 6px}
+  #tabs button{flex:none;max-width:none;width:100%;border-radius:12px}
+  #tabs button.on{background:var(--soft)}
+  body.nav{padding-left:96px}
+  body.nav #main{padding-bottom:32px}
+  body.nav #toast{bottom:32px}
+}
 
-/* review */
+/* flashcards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.modes button{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:12px;min-height:72px}
+.modes button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.modes b{display:block} .modes small{color:var(--mute)}
 .flash{text-align:center;padding:28px 16px;min-height:300px;display:flex;flex-direction:column;justify-content:center;gap:12px}
-.flash .word{font:600 2.4rem var(--serif);overflow-wrap:anywhere}
+.flash .word{font:600 2.3rem var(--serif);overflow-wrap:anywhere}
 .flash .mean{font-size:1.4rem;color:var(--accent)}
-.flash .ctx{text-align:left;margin:8px auto;max-width:560px}
+.flash .ctx{text-align:left;margin:8px auto;max-width:560px;font-size:1.15rem}
 .grade{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .grade .btn{padding:10px 4px}
 .grade small{display:block;color:var(--mute);font-size:.7rem}
 
-/* words */
 .wl{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .wl b{font:600 1.05rem var(--serif)}
-.wl .grow{flex:1;min-width:0}
 .dot{width:12px;height:12px;border-radius:50%;flex:none;border:1px solid var(--line)}
-.days{display:flex;gap:4px;flex-wrap:wrap}
-.days i{width:26px;height:26px;border-radius:6px;background:var(--line);font:normal .65rem/26px var(--sans);text-align:center;color:var(--mute)}
-.days i.a{background:var(--accent);color:var(--accent-ink)}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;z-index:50;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;max-width:90vw;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.3)}
-progress{width:100%;height:10px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;max-width:330px}
+.days i{aspect-ratio:1;border-radius:8px;background:var(--soft);font:normal .7rem var(--sans);display:grid;place-items:center;color:var(--mute)}
+.days i.a{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.split{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--soft);margin:8px 0}
+.split i{display:block;height:100%}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;z-index:50;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;max-width:90vw;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -134,7 +147,7 @@ progress{width:100%;height:10px}
 <div id="main"></div>
 <aside id="sheet" hidden></aside>
 <div id="player" hidden></div>
-<nav id="tabs"></nav>
+<nav id="tabs" hidden></nav>
 <div id="toast" hidden></div>
 
 <script>
@@ -160,36 +173,49 @@ const NOSPACE = new Set(['zh', 'ja', 'th']);
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const today = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const num = n => Math.round(n).toLocaleString();
 
-/* ---------------- state & storage ---------------- */
+/* ---------------- state & storage (IndexedDB, falling back to localStorage) ---------------- */
 const DEFAULTS = () => ({
-  settings: {native:'en', target:'', rate:0.9, voice:'', provider:'auto', email:'', ltUrl:'', ltKey:'', goal:10, font:22},
+  settings: {native:'en', target:'', rate:0.9, voice:'', provider:'auto', email:'', ltUrl:'', ltKey:'', goal:1000, font:22, theme:'auto', autoKnown:true},
   lessons: [], words: {}, cache: {}, stats: {days: {}}
 });
-let S = DEFAULTS(), memOnly = false, saveTimer = 0;
-function load() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) { const d = JSON.parse(raw), def = DEFAULTS(); S = {...def, ...d, settings: {...def.settings, ...d.settings}, stats: {days: {}, ...d.stats}}; }
-  } catch (e) { memOnly = true; }
+let S = DEFAULTS(), memOnly = false, saveTimer = 0, idb = null;
+const merge = d => { const def = DEFAULTS(); return {...def, ...d, settings: {...def.settings, ...d.settings}, stats: {days: {}, ...d.stats}}; };
+function idbOpen() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('storyglot', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked'));
+    setTimeout(() => rej(new Error('timeout')), 4000);
+  });
+}
+const idbGet = k => new Promise((res, rej) => { const r = idb.transaction('kv').objectStore('kv').get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const idbPut = (k, v) => new Promise((res, rej) => { const t = idb.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = res; t.onerror = t.onabort = () => rej(t.error); });
+async function load() {
+  let d = null;
+  try { idb = await idbOpen(); d = await idbGet(KEY); } catch (e) { idb = null; }
+  if (!d) { try { const raw = localStorage.getItem(KEY); if (raw) d = JSON.parse(raw); } catch (e) { if (!idb) memOnly = true; } }
+  if (d) S = merge(d);
 }
 function saveNow() {
   clearTimeout(saveTimer); saveTimer = 0;
+  if (idb) { idbPut(KEY, S).catch(() => toast('Could not save on this device. Export a backup from Settings.')); return; }
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
-  catch (e) {
-    if (Object.keys(S.cache).length) { S.cache = {}; try { localStorage.setItem(KEY, JSON.stringify(S)); return; } catch (e2) {} }
-    if (!memOnly) { memOnly = true; toast('Could not save on this device. Export a backup from Settings.'); }
-  }
+  catch (e) { if (!memOnly) { memOnly = true; toast('Could not save on this device. Export a backup from Settings.'); } }
 }
 function save() { if (!saveTimer) saveTimer = setTimeout(saveNow, 400); }
 addEventListener('pagehide', () => { if (saveTimer) saveNow(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) saveNow(); });
 
+// word entry: s = 0 seen only, 1 new, 2 familiar, 3 known, 4 mastered, 5 ignored; 1-3 have a flashcard
 const dict = lang => (S.words[lang] ||= {});
-const stOf = (lang, k) => { const e = dict(lang)[k]; return e ? e.s : 0; };   // 0 new, 1-3 learning, 4 known, 5 ignored
-function bump(field, n = 1) { const d = (S.stats.days[today()] ||= {}); d[field] = (d[field] || 0) + n; save(); }
+const stOf = (lang, k) => { const e = dict(lang)[k]; return e ? e.s : 0; };
+const isKnown = s => s === 3 || s === 4;
+function bump(field, n = 1) { if (!n) return; const d = (S.stats.days[today()] ||= {}); d[field] = (d[field] || 0) + n; save(); }
 function streak() {
   let n = 0; const d = new Date();
   if (!S.stats.days[today(d)]) d.setDate(d.getDate() - 1);
@@ -197,11 +223,25 @@ function streak() {
   return n;
 }
 function counts(lang) {
-  let known = 0, learning = 0, due = 0; const now = Date.now();
+  let known = 0, cards = 0, due = 0; const now = Date.now();
   for (const e of Object.values(dict(lang))) {
-    if (e.s === 4) known++; else if (e.s >= 1 && e.s <= 3) { learning++; if ((e.due || 0) <= now) due++; }
+    if (isKnown(e.s)) known++;
+    if (e.s >= 1 && e.s <= 3) { cards++; if ((e.due || 0) <= now) due++; }
   }
-  return {known, learning, due};
+  return {known, cards, due};
+}
+function totals() {
+  const t = {read: 0, heard: 0, listen: 0, reviews: 0, newW: 0, reinf: 0};
+  for (const d of Object.values(S.stats.days)) for (const k in t) t[k] += d[k] || 0;
+  t.input = t.read + t.heard;
+  return t;
+}
+// Rough level estimate from total words of input (reading + listening) inside the app.
+const LEVELS = [['A1', 0], ['A2', 30000], ['B1', 120000], ['B2', 350000], ['C1', 800000], ['C2', 1600000]];
+function level(input) {
+  let i = 0; while (i + 1 < LEVELS.length && input >= LEVELS[i + 1][1]) i++;
+  const next = LEVELS[i + 1];
+  return {name: LEVELS[i][0], next: next && next[0], pct: next ? 100 * (input - LEVELS[i][1]) / (next[1] - LEVELS[i][1]) : 100, left: next ? next[1] - input : 0};
 }
 
 /* ---------------- text segmentation ---------------- */
@@ -229,7 +269,8 @@ function tokens(t, lang) {
   return out;
 }
 const keyOf = (w, lang) => { try { return w.toLocaleLowerCase(lang); } catch (e) { return w.toLowerCase(); } };
-function lessonWords(L) { const out = []; for (const s of L.sents) for (const t of tokens(s.t, L.lang)) if (t.word) out.push(keyOf(t.w, L.lang)); return out; }
+const sentWords = (t, lang) => tokens(t, lang).filter(x => x.word).map(x => keyOf(x.w, lang));
+function lessonWords(L) { const out = []; for (const s of L.sents) out.push(...sentWords(s.t, L.lang)); return out; }
 
 /* ---------------- translation ---------------- */
 const sessCache = new Map(), devT = {};
@@ -244,7 +285,7 @@ function chunks(text, max = 450) {
   if (cur.trim()) out.push(cur);
   return out;
 }
-async function onDevice(text, from, to) {            // Chrome's built-in on-device translator, where available
+async function onDevice(text, from, to) {            // Chrome's built-in on-device translator, where installed
   if (!('Translator' in self)) return null;
   const k = from + '>' + to;
   const within = (pr, ms) => Promise.race([pr, new Promise(r => setTimeout(() => r(null), ms))]);   // the API can hang; never block on it
@@ -333,10 +374,11 @@ function speak(text, lang, {rate, onend, onboundary, onerror} = {}) {
   P.u = u;                                              // keep a reference: some engines drop events otherwise
   setTimeout(() => { if (my === P.tok) speechSynthesis.speak(u); }, 60);   // speak() right after cancel() can be swallowed
 }
-function stopSpeech() { P.tok++; if (TTS) speechSynthesis.cancel(); if (P.playing && P.t0) bump('listen', Math.round((Date.now() - P.t0) / 1000)); P.playing = false; P.t0 = 0; }
+function logListen() { if (P.playing && P.t0) bump('listen', Math.round((Date.now() - P.t0) / 1000)); P.t0 = 0; }
+function stopSpeech() { P.tok++; if (TTS) speechSynthesis.cancel(); logListen(); P.playing = false; }
 function playFrom(i) {
   const L = cur(); if (!L) return;
-  if (P.playing && P.t0) bump('listen', Math.round((Date.now() - P.t0) / 1000));
+  logListen();
   if (i < 0) i = 0;
   if (i >= L.sents.length) { stopSpeech(); drawPlayer(); return; }
   P.i = i; P.playing = true; P.t0 = Date.now();
@@ -344,7 +386,7 @@ function playFrom(i) {
   if (!voicesFor(L.lang).length && voices.length && !P.warned) { P.warned = true; toast('No ' + langName(L.lang) + ' voice found on this device — install one in your system text-to-speech settings for natural audio.'); }
   speak(L.sents[i].t, L.lang, {
     onboundary: e => markSpoken(i, e.charIndex),
-    onend: () => { if (L.pos !== i) { L.pos = i; save(); } playFrom(P.repeat ? i : i + 1); },
+    onend: () => { bump('heard', sentWords(L.sents[i].t, L.lang).length); if (L.pos !== i) { L.pos = i; save(); } playFrom(P.repeat ? i : i + 1); },
     onerror: () => { stopSpeech(); drawPlayer(); toast('Audio playback failed on this device.'); }
   });
 }
@@ -361,41 +403,51 @@ function markSpoken(i, ch) {
 }
 
 /* ---------------- views ---------------- */
-let view = 'library';
+let view = 'home';
 const R = {id: null, lines: false, sel: null};       // reader state
 const A = {native: true, busy: false, done: 0, total: 0, abort: false, title: '', text: ''};   // add-text form state
-const RV = {queue: [], shown: false, done: 0};        // review session
+const RV = {queue: [], shown: false, done: 0, mode: 'meaning', active: false};   // flashcard session
 const WF = {q: '', st: 'all'};                        // word list filter
+const LF = {show: 'all'};                             // library filter
 const cur = () => S.lessons.find(l => l.id === R.id);
 let toastTimer;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 4500); }
 function go(v) { if (view === 'reader' && v !== 'reader') { stopSpeech(); closeSheet(); } view = v; render(); scrollTo(0, 0); }
+function applyTheme() {
+  const t = S.settings.theme;
+  document.documentElement.dataset.theme = t === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t;
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 
 const ICON = {
+  home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   library: '<path d="M4 5a2 2 0 0 1 2-2h5v17H6a2 2 0 0 0-2 2zM20 5a2 2 0 0 0-2-2h-5v17h5a2 2 0 0 1 2 2z"/>',
   review: '<rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/>',
-  words: '<path d="M4 6h16M4 12h16M4 18h10"/>',
   stats: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'
 };
+const TABS = [['home', 'Home'], ['library', 'Library'], ['review', 'Flashcards'], ['stats', 'Progress'], ['settings', 'Settings']];
+const TAB_OF = {add: 'library', words: 'review'};
 function drawTabs() {
   const el = $('#tabs');
   el.hidden = view === 'reader' || view === 'welcome';
+  document.body.classList.toggle('nav', !el.hidden);
   if (el.hidden) return;
-  const due = counts(S.settings.target).due;
-  el.innerHTML = [['library','Library'],['review','Review'],['words','Words'],['stats','Progress'],['settings','Settings']].map(([v, n]) =>
-    `<button data-a="go" data-v="${v}" class="${view === v || (v === 'library' && view === 'add') ? 'on' : ''}"><svg viewBox="0 0 24 24">${ICON[v]}</svg>${n}${v === 'review' && due ? `<span class="badge">${due}</span>` : ''}</button>`).join('');
+  const due = counts(S.settings.target).due, on = TAB_OF[view] || view;
+  el.innerHTML = TABS.map(([v, n]) =>
+    `<button data-a="go" data-v="${v}" class="${on === v ? 'on' : ''}"><svg viewBox="0 0 24 24">${ICON[v]}</svg>${n}${v === 'review' && due ? `<span class="badge">${due}</span>` : ''}</button>`).join('');
 }
 function render() {
   if (!S.settings.target) view = 'welcome';
   const m = $('#main');
   $('#player').hidden = view !== 'reader';
   m.innerHTML = (memOnly ? '<div class="banner">Storage is not available in this browser mode, so progress will be lost when you close the page. Open the app from a web address (see README) or export a backup in Settings.</div>' : '') +
-    ({welcome: vWelcome, library: vLibrary, add: vAdd, reader: vReader, review: vReview, words: vWords, stats: vStats, settings: vSettings}[view])();
+    ({welcome: vWelcome, home: vHome, library: vLibrary, add: vAdd, reader: vReader, review: vReview, words: vWords, stats: vStats, settings: vSettings}[view])();
   drawTabs();
   if (view === 'reader') { drawPlayer(); applyFont(); }
+  if (view === 'review' && RV.active && RV.mode === 'listen' && !RV.shown && RV.queue.length) speak(RV.queue[0], S.settings.target, {rate: Math.min(S.settings.rate, 0.9)});
 }
-const langOptions = (sel, skip) => LANGS.filter(l => l[0] !== skip).map(l => `<option value="${l[0]}" ${l[0] === sel ? 'selected' : ''}>${l[1]}</option>`).join('');
+const langOptions = sel => LANGS.map(l => `<option value="${l[0]}" ${l[0] === sel ? 'selected' : ''}>${l[1]}</option>`).join('');
 
 function vWelcome() {
   const guess = (navigator.language || 'en').slice(0, 2).toLowerCase();
@@ -410,28 +462,44 @@ function vWelcome() {
 
 function lessonMix(L) {
   const uniq = new Set(lessonWords(L)); let n = 0, l = 0, k = 0;
-  for (const w of uniq) { const s = stOf(L.lang, w); if (!s) n++; else if (s <= 3) l++; else k++; }
+  for (const w of uniq) { const s = stOf(L.lang, w); if (!s) n++; else if (s <= 2) l++; else k++; }
   return {total: uniq.size || 1, n, l, k};
 }
-function vLibrary() {
-  const t = S.settings.target, c = counts(t), d = S.stats.days[today()] || {};
-  const list = S.lessons.filter(l => l.lang === t).sort((a, b) => b.created - a.created);
-  return `<div class="top"><h1 class="grow">Storyglot</h1><span class="pill">Learning ${esc(langName(t))}</span></div>
+function lessonCard(L) {
+  const m = lessonMix(L), pc = x => (100 * x / m.total).toFixed(1);
+  return `<div class="card lesson" data-a="open" data-id="${L.id}">
+    <div class="grow"><h3>${esc(L.title)}</h3>
+      <div class="muted">${num(L.wc || 0)} words · ${Math.round(100 * m.n / m.total)}% new${L.done ? ' · read ✓' : ''}</div>
+      <div class="bar" title="known / learning / new"><i class="k" style="width:${pc(m.k)}%"></i><i class="l" style="width:${pc(m.l)}%"></i><i class="n" style="width:${pc(m.n)}%"></i></div>
+    </div>
+    <button class="btn danger" data-a="delLesson" data-id="${L.id}" aria-label="Delete">✕</button></div>`;
+}
+function vHome() {
+  const t = S.settings.target, c = counts(t), d = S.stats.days[today()] || {}, tot = totals(), lv = level(tot.input);
+  const todayIn = (d.read || 0) + (d.heard || 0), goal = S.settings.goal;
+  const next = S.lessons.filter(l => l.lang === t && !l.done).sort((a, b) => (b.opened || 0) - (a.opened || 0) || b.created - a.created || a.part - b.part)[0];
+  return `<div class="top"><h1 class="grow">Storyglot</h1><button class="pill" data-a="go" data-v="settings">Learning ${esc(langName(t))}</button></div>
+  <div class="card goal"><div class="row"><div class="grow"><div class="muted">Today's input</div><b>${num(todayIn)}</b> <span class="muted">/ ${num(goal)} words</span></div>
+      <span class="pill">${todayIn >= goal ? 'Goal reached ✓' : streak() + ' day streak'}</span></div>
+    <div class="meter" style="margin-top:10px"><i style="width:${Math.min(100, 100 * todayIn / goal)}%"></i></div>
+    <div class="muted" style="margin-top:8px">${num(d.read || 0)} read · ${num(d.heard || 0)} listened · ${d.saved || 0} flashcards created</div></div>
   <div class="tiles">
-    <div class="tile"><b>${c.known}</b><span>known words</span></div>
-    <div class="tile"><b>${d.saved || 0}<small style="font-size:.9rem;color:var(--mute)"> / ${S.settings.goal}</small></b><span>new words saved today</span></div>
+    <div class="tile"><b>${num(tot.input)}</b><span>total words of input</span></div>
+    <div class="tile"><b>${num(c.known)}</b><span>known words</span></div>
+    <div class="tile"><b>${lv.name}</b><span>estimated level</span></div>
     <div class="tile"><b>${streak()}</b><span>day streak</span></div>
   </div>
-  <button class="btn primary" data-a="go" data-v="add" style="width:100%;margin-bottom:12px">+ Add a text</button>
-  ${list.length ? list.map(L => { const m = lessonMix(L), pc = x => (100 * x / m.total).toFixed(1); return `
-    <div class="card lesson" data-a="open" data-id="${L.id}">
-      <div class="grow"><h3>${esc(L.title)}</h3>
-        <div class="muted">${L.wc || 0} words · ${Math.round(100 * m.n / m.total)}% new${L.done ? ' · finished' : ''}</div>
-        <div class="bar" title="known / learning / new"><i class="k" style="width:${pc(m.k)}%"></i><i class="l" style="width:${pc(m.l)}%"></i><i class="n" style="width:${pc(m.n)}%"></i></div>
-      </div>
-      <button class="btn danger" data-a="delLesson" data-id="${L.id}" aria-label="Delete">✕</button>
-    </div>`; }).join('')
-  : `<div class="empty">No texts yet.<br>Paste an article, a message, song lyrics — anything you find interesting — and turn it into a ${esc(langName(t))} lesson with audio.</div>`}`;
+  ${next ? `<h2>Continue</h2>${lessonCard(next)}` : ''}
+  ${c.due ? `<div class="card row"><div class="grow"><b>${c.due} flashcard${c.due === 1 ? '' : 's'} due</b><div class="muted">A short review keeps new words alive.</div></div><button class="btn primary" data-a="go" data-v="review">Review</button></div>` : ''}
+  <button class="btn ${next ? '' : 'primary'}" data-a="go" data-v="add" style="width:100%">+ Add a text</button>
+  ${next ? '' : `<div class="empty">Paste an article, a message, song lyrics or open a book — anything you find interesting — and turn it into a ${esc(langName(t))} lesson with audio.</div>`}`;
+}
+function vLibrary() {
+  const t = S.settings.target;
+  const list = S.lessons.filter(l => l.lang === t && (LF.show === 'all' || (LF.show === 'read') === !!l.done)).sort((a, b) => b.created - a.created || a.part - b.part);
+  return `<div class="top"><h1 class="grow">Library</h1><button class="btn primary" data-a="go" data-v="add">+ Add a text</button></div>
+  <div class="seg">${[['all', 'All'], ['unread', 'To read'], ['read', 'Read']].map(([v, n]) => `<button data-a="libFilter" data-v="${v}" class="${LF.show === v ? 'on' : ''}">${n}</button>`).join('')}</div>
+  ${list.length ? list.map(lessonCard).join('') : '<div class="empty">Nothing here yet.</div>'}`;
 }
 
 function vAdd() {
@@ -444,19 +512,19 @@ function vAdd() {
     <label class="f">Text<textarea id="a-text" placeholder="Paste or type your text here…">${esc(A.text)}</textarea></label>
     <div class="row">
       <button class="btn primary" data-a="create" ${A.busy ? 'disabled' : ''}>${A.native ? 'Translate &amp; create lesson' : 'Create lesson'}</button>
-      <label class="btn" style="display:inline-flex;align-items:center">Open .txt file<input type="file" id="a-file" accept=".txt,text/plain" hidden></label>
+      <label class="btn" style="display:inline-flex;align-items:center">Open a file (.txt, .epub)<input type="file" id="a-file" accept=".txt,.epub,text/plain,application/epub+zip" hidden></label>
     </div>
     ${A.busy ? `<div style="margin-top:14px"><progress max="${A.total}" value="${A.done}"></progress>
-      <div class="row muted">Translating sentence ${A.done} of ${A.total}… <button class="btn" data-a="cancelCreate">Cancel</button></div></div>` : ''}
-    <p class="muted" style="margin-bottom:0">${A.native ? 'Translation needs an internet connection. Your text is sent to the translation service chosen in Settings.' : 'Works fully offline — translations are only fetched when you ask for them.'}</p>
+      <div class="row muted"><span id="a-prog">Translating sentence ${A.done} of ${A.total}…</span> <button class="btn" data-a="cancelCreate">Cancel</button></div></div>` : ''}
+    <p class="muted" style="margin-bottom:0">${A.native ? 'Translation needs an internet connection. Your text is sent to the translation service chosen in Settings.' : 'Works fully offline — translations are only fetched when you ask for them. Long texts and books are split into chapters.'}</p>
   </div>`;
 }
 
 function wordsHtml(s, lang) {
   return tokens(s.t, lang).map(t => {
     if (!t.word) return esc(t.w);
-    const k = keyOf(t.w, lang), st = stOf(lang, k);
-    return `<span class="w st${st}" data-k="${esc(k)}" data-o="${t.o}">${esc(t.w)}</span>`;
+    const k = keyOf(t.w, lang);
+    return `<span class="w st${stOf(lang, k)}" data-k="${esc(k)}" data-o="${t.o}">${esc(t.w)}</span>`;
   }).join('');
 }
 function vReader() {
@@ -476,12 +544,12 @@ function vReader() {
   const missing = L.sents.filter(s => !s.tr).length;
   return `<div class="readbar"><button class="btn" data-a="go" data-v="library">‹</button><h1>${esc(L.title)}</h1>
     <button class="btn" data-a="font" data-d="-2" aria-label="Smaller text">A−</button><button class="btn" data-a="font" data-d="2" aria-label="Larger text">A+</button>
-    <button class="btn ${R.lines ? 'on' : ''}" data-a="lines">Translation</button></div>
-  <div class="legend"><span><i style="background:var(--new)"></i>new</span><span><i style="background:var(--l1)"></i>learning</span><span><i style="background:var(--l3)"></i>almost known</span><span><i></i>known</span><span>Tap any word.</span></div>
+    <button class="btn ${R.lines ? 'on' : ''}" data-a="lines">Sentences</button></div>
+  <div class="legend"><span><i style="background:var(--new)"></i>new</span><span><i style="background:var(--g1)"></i>flashcard</span><span><i style="background:var(--g3)"></i>known</span><span><i></i>mastered</span><span>Tap a word · select several for a phrase</span></div>
   ${R.lines && missing ? `<button class="btn" data-a="trAll" style="margin-bottom:8px">Translate all ${missing} sentences</button>` : ''}
   <div id="text" lang="${esc(L.lang)}" dir="auto">${html}</div>
-  <div class="card" style="text-align:center"><p class="muted" style="margin-top:0">Finished reading? Every word still marked blue becomes “known”.</p>
-    <button class="btn primary" data-a="finish">✓ Finish lesson</button></div>`;
+  <div class="card" style="text-align:center"><p class="muted" style="margin-top:0">${S.settings.autoKnown ? 'Done? The words you did not tap (still blue) are counted as words you know.' : 'Done? The words are added to your total input.'}</p>
+    <button class="btn primary" data-a="finish">✓ Mark as read</button></div>`;
 }
 function applyFont() { const t = $('#text'); if (t) t.style.fontSize = S.settings.font + 'px'; }
 function drawPlayer() {
@@ -498,6 +566,7 @@ function drawPlayer() {
 }
 
 /* ---------------- word sheet ---------------- */
+const ST = [[1, 'New', 'b1'], [2, 'Familiar', 'b2'], [3, 'Known', 'b3'], [4, 'Mastered', ''], [5, 'Ignore', '']];
 function paintWord(lang, k) {
   const st = stOf(lang, k);
   document.querySelectorAll('.w').forEach(w => { if (w.dataset.k === k) w.className = w.className.replace(/st\d/, 'st' + st); });
@@ -505,42 +574,39 @@ function paintWord(lang, k) {
 function closeSheet() { $('#sheet').hidden = true; R.sel = null; document.querySelectorAll('.w.sel').forEach(e => e.classList.remove('sel')); }
 function drawSheet() {
   const el = $('#sheet'), sel = R.sel; if (!sel) { el.hidden = true; return; }
-  const e = dict(sel.lang)[sel.k] || {s: 0, tr: ''};
+  const saved = dict(sel.lang)[sel.k], e = saved || {s: 0, tr: sel.tr};
   const L = cur(), sent = L && sel.i != null ? L.sents[sel.i] : null, ctx = sent ? sent.t : e.ctx;
-  const labels = [[1, 'New', 'b1'], [2, 'Seen', 'b2'], [3, 'Familiar', 'b3'], [4, '✓ Known', ''], [5, 'Ignore', '']];
   el.innerHTML = `<div class="hd"><b lang="${esc(sel.lang)}">${esc(sel.surface)}</b>
       <button class="mini" data-a="sayWord" aria-label="Listen">🔊</button><button class="mini" data-a="closeSheet" aria-label="Close">✕</button></div>
-    <input id="s-mean" value="${esc(e.tr || '')}" placeholder="${sel.busy ? 'Looking up…' : sel.err ? 'Type a meaning' : 'Meaning'}" aria-label="Meaning">
+    <input id="s-mean" value="${esc(e.tr || sel.tr || '')}" placeholder="${sel.busy ? 'Looking up…' : sel.err ? 'Type a meaning' : 'Meaning'}" aria-label="Meaning">
     ${sel.err ? `<div class="muted" style="margin:-4px 0 8px">${esc(sel.err)}</div>` : ''}
-    <div class="status">${labels.map(([n, t, c]) => `<button class="${c} ${e.s === n ? 'on' : ''}" data-a="setSt" data-s="${n}">${t}</button>`).join('')}</div>
-    ${ctx ? `<div class="ctx" lang="${esc(sel.lang)}">${esc(ctx)}${sent ? (sent.tr ? `<small>${esc(sent.tr)}</small>` : '') : ''}</div>
+    <div class="status">${ST.map(([n, t, c]) => `<button class="${c} ${e.s === n ? 'on' : ''}" data-a="setSt" data-s="${n}">${t}</button>`).join('')}</div>
+    <div class="muted" style="margin-bottom:6px">${!e.s ? 'Pick a level to save this as a flashcard.' : e.s <= 3 ? 'In your flashcards' : e.s === 4 ? 'No longer reviewed' : 'Ignored'}${e.n ? ` · met ${e.n} time${e.n === 1 ? '' : 's'}` : ''}</div>
+    ${ctx ? `<div class="ctx" lang="${esc(sel.lang)}">${esc(ctx)}${sent && sent.tr ? `<small>${esc(sent.tr)}</small>` : ''}</div>
       <div class="row">${sent ? `<button class="btn" data-a="playSent" data-i="${sel.i}">▶ Sentence</button>${sent.tr ? '' : `<button class="btn" data-a="trSent" data-i="${sel.i}">Translate sentence</button>`}` : ''}</div>` : ''}`;
   el.hidden = false;
 }
-async function openWord(lang, k, surface, i) {
-  const d = dict(lang); let e = d[k];
-  if (!e) {                                             // tapping a new word saves it as "learning"
-    const L = cur();
-    e = d[k] = {s: 1, tr: '', ctx: L && i != null ? L.sents[i].t : '', added: Date.now(), ivl: 1, due: Date.now() + DAY};
-    bump('saved'); paintWord(lang, k); save();
-  }
-  const sel = R.sel = {lang, k, surface, i, busy: !e.tr, err: ''};
+function setStatus(lang, k, s, init = {}) {
+  const d = dict(lang), e = (d[k] ||= {s: 0});
+  if (!e.added) { e.added = Date.now(); e.tr ||= init.tr || ''; e.ctx ||= init.ctx || ''; }
+  if (e.s === s) return;
+  if (s >= 1 && s <= 3 && !(e.s >= 1 && e.s <= 3)) { e.ivl = 1; e.due = Date.now() + DAY; if (!e.card) { e.card = 1; bump('saved'); } }
+  if (isKnown(s) && !isKnown(e.s)) bump('known');
+  e.s = s; save(); paintWord(lang, k);
+}
+// Tapping a word looks it up and adds it to the flashcards; a selected phrase is only saved once a level is picked.
+async function openWord(lang, k, surface, i, phrase) {
+  const d = dict(lang), L = cur(), ctx = L && i != null ? L.sents[i].t : '';
+  if (!phrase && !stOf(lang, k)) setStatus(lang, k, 1, {ctx});
+  const sel = R.sel = {lang, k, surface, i, ctx, tr: '', busy: !(d[k] && d[k].tr), err: ''};
   drawSheet();
-  if (e.tr) return;
+  if (!sel.busy) return;
   try {
-    const tr = await translate(k, lang, S.settings.native);
-    if (d[k] && !d[k].tr) { d[k].tr = tr; save(); }
+    sel.tr = await translate(k, lang, S.settings.native);
+    if (d[k] && d[k].added && !d[k].tr) { d[k].tr = sel.tr; save(); }
   } catch (err) { sel.err = err.message; }
   sel.busy = false;
   if (R.sel === sel) drawSheet();
-}
-function setStatus(lang, k, s) {
-  const d = dict(lang), e = (d[k] ||= {s: 0, tr: '', added: Date.now()});
-  if (e.s === s) return;
-  if (s === 4 && e.s !== 4) bump('known');
-  e.s = s;
-  if (s >= 1 && s <= 3) { e.ivl ||= 1; e.due ||= Date.now() + DAY; }
-  save(); paintWord(lang, k);
 }
 async function trSent(i) {
   const L = cur(); if (!L) return; const s = L.sents[i]; if (!s || s.tr) return;
@@ -550,12 +616,66 @@ async function trSent(i) {
   if (el && el.isConnected) el.textContent = s.tr || 'Tap to translate';
   if (R.sel && R.sel.i === i) drawSheet();
 }
+let selTimer;
+document.addEventListener('selectionchange', () => {
+  clearTimeout(selTimer);
+  selTimer = setTimeout(() => {
+    if (view !== 'reader') return;
+    const sel = getSelection(), box = $('#text'), L = cur();
+    if (!sel || sel.isCollapsed || !box || !L || !box.contains(sel.anchorNode) || !box.contains(sel.focusNode)) return;
+    const txt = sel.toString().replace(/\s+/g, ' ').trim();
+    if (txt.length > 80 || sentWords(txt, L.lang).length < 2) return;
+    const node = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement, s = node && node.closest('.s');
+    openWord(L.lang, keyOf(txt, L.lang), txt, s ? +s.dataset.i : null, true);
+  }, 600);
+});
+
+/* ---------------- importing: epub ---------------- */
+async function unzip(buf) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), td = new TextDecoder();
+  let i = buf.byteLength - 22;
+  while (i >= 0 && dv.getUint32(i, true) !== 0x06054b50) i--;
+  if (i < 0) throw new Error('Not a zip file');
+  let n = dv.getUint16(i + 10, true), off = dv.getUint32(i + 16, true); const files = {};
+  while (n-- && dv.getUint32(off, true) === 0x02014b50) {
+    const nl = dv.getUint16(off + 28, true), el = dv.getUint16(off + 30, true), cl = dv.getUint16(off + 32, true);
+    files[td.decode(u8.subarray(off + 46, off + 46 + nl))] = {method: dv.getUint16(off + 10, true), size: dv.getUint32(off + 20, true), at: dv.getUint32(off + 42, true)};
+    off += 46 + nl + el + cl;
+  }
+  return async name => {
+    const f = files[name]; if (!f) return null;
+    const start = f.at + 30 + dv.getUint16(f.at + 26, true) + dv.getUint16(f.at + 28, true), data = u8.subarray(start, start + f.size);
+    if (f.method === 0) return td.decode(data);
+    if (f.method !== 8 || !self.DecompressionStream) throw new Error('This file uses compression the browser cannot read');
+    return new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+  };
+}
+async function readEpub(buf) {
+  const read = await unzip(buf), xml = s => new DOMParser().parseFromString(s, 'application/xml');
+  const container = await read('META-INF/container.xml'); if (!container) throw new Error('Not an EPUB file');
+  const opfPath = xml(container).getElementsByTagName('rootfile')[0].getAttribute('full-path');
+  const opf = xml(await read(opfPath)), dir = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : '';
+  const items = {}; for (const it of opf.getElementsByTagName('item')) items[it.getAttribute('id')] = it.getAttribute('href');
+  const titleEl = opf.getElementsByTagNameNS('*', 'title')[0], out = [];
+  for (const ref of opf.getElementsByTagName('itemref')) {
+    const href = items[ref.getAttribute('idref')]; if (!href) continue;
+    const html = await read(dir + decodeURIComponent(href.split('#')[0])); if (!html) continue;
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('script,style,nav').forEach(e => e.remove());
+    const blocks = [...doc.querySelectorAll('p,h1,h2,h3,h4,h5,h6,li,blockquote,pre')].filter(e => !e.querySelector('p,li,blockquote'));
+    const text = (blocks.length ? blocks.map(e => e.textContent) : [doc.body ? doc.body.textContent : '']).map(t => t.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    out.push(...text);
+  }
+  if (!out.length) throw new Error('No readable text found in this book');
+  return {title: titleEl ? titleEl.textContent.trim() : '', text: out.join('\n')};
+}
 
 /* ---------------- lesson creation ---------------- */
 async function pool(items, n, fn) {
   let idx = 0;
   await Promise.all(Array.from({length: Math.min(n, items.length)}, async () => { while (idx < items.length) { const i = idx++; await fn(items[i], i); } }));
 }
+const PART_WORDS = 700;                                  // long texts become chapters of roughly this size
 async function createLesson() {
   if (A.busy) return;
   const title = $('#a-title').value.trim(), text = $('#a-text').value.trim();
@@ -573,118 +693,149 @@ async function createLesson() {
       await pool(src, 3, async (x, i) => {
         if (A.abort) throw new Error('Cancelled.');
         out[i] = {t: await translate(x.s, native, target), tr: x.s, p: x.p};
-        A.done++; const pr = $('progress'); if (pr) { pr.value = A.done; pr.nextElementSibling.firstChild.textContent = `Translating sentence ${A.done} of ${A.total}… `; }
+        A.done++; const pr = $('progress'), lb = $('#a-prog'); if (pr) pr.value = A.done; if (lb) lb.textContent = `Translating sentence ${A.done} of ${A.total}…`;
       });
     } catch (e) { A.busy = false; A.abort = true; if (view === 'add') render(); toast(e.message + (e.message === 'Cancelled.' ? '' : ' Finished sentences are kept — press the button again to resume.')); return; }
     A.busy = false; sents = out;
   }
-  const L = {id: uid(), lang: target, title: title || sents[0].t.slice(0, 60), sents, created: Date.now(), pos: 0, done: false};
-  L.wc = lessonWords(L).length;
-  S.lessons.push(L); saveNow();
+  const parts = [[]]; let wc = 0;
+  for (const s of sents) {
+    if (wc >= PART_WORDS && s.p) { parts.push([]); wc = 0; }
+    parts[parts.length - 1].push(s); wc += sentWords(s.t, target).length;
+  }
+  const base = title || sents[0].t.slice(0, 60), created = Date.now();
+  const made = parts.map((ps, i) => {
+    const L = {id: uid(), lang: target, title: parts.length > 1 ? `${base} · ${i + 1}/${parts.length}` : base, sents: ps, created, part: i, pos: 0, done: false};
+    L.wc = lessonWords(L).length; return L;
+  });
+  S.lessons.push(...made); saveNow();
   A.title = A.text = '';
-  openLesson(L.id);
+  if (made.length > 1) toast(`Split into ${made.length} chapters.`);
+  openLesson(made[0].id);
 }
-function openLesson(id) { R.id = id; R.lines = false; R.sel = null; P.i = (cur() || {}).pos || 0; P.playing = false; go('reader'); }
+function openLesson(id) { R.id = id; R.lines = false; R.sel = null; const L = cur(); if (!L) return; L.opened = Date.now(); save(); P.i = L.pos || 0; P.playing = false; go('reader'); }
 function finishLesson() {
   const L = cur(); if (!L) return;
-  const d = dict(L.lang), words = lessonWords(L), fresh = [...new Set(words)].filter(k => !d[k]);
-  if (fresh.length && !confirm(`Mark the ${fresh.length} remaining blue word${fresh.length === 1 ? '' : 's'} as known?`)) return;
-  fresh.forEach(k => d[k] = {s: 4});
-  if (fresh.length) bump('known', fresh.length);
-  bump('read', words.length);
+  const d = dict(L.lang), words = lessonWords(L), uniq = [...new Set(words)], auto = S.settings.autoKnown;
+  const fresh = uniq.filter(k => !stOf(L.lang, k));
+  if (auto && fresh.length && !confirm(`Mark the ${fresh.length} remaining blue word${fresh.length === 1 ? '' : 's'} as known?`)) return;
+  const newW = uniq.filter(k => !d[k] || !d[k].n).length;
+  for (const k of words) { const e = (d[k] ||= {s: 0}); e.n = (e.n || 0) + 1; }      // log every encounter
+  if (auto) { fresh.forEach(k => d[k].s = 4); bump('known', fresh.length); }
+  bump('read', words.length); bump('newW', newW); bump('reinf', uniq.length - newW);
   L.done = true; saveNow();
-  toast(`Lesson finished — ${fresh.length} word${fresh.length === 1 ? '' : 's'} added to your known words.`);
-  go('library');
+  toast(`${num(words.length)} words added to your input — ${newW} new, ${uniq.length - newW} reinforced.`);
+  const nxt = S.lessons.find(x => x.created === L.created && x.part === L.part + 1 && !x.done);
+  nxt ? openLesson(nxt.id) : go('home');
 }
 
-/* ---------------- review (spaced repetition) ---------------- */
+/* ---------------- flashcards (spaced repetition, always in context) ---------------- */
+const MODES = [['meaning', 'Recognise', 'See the word, recall its meaning'], ['recall', 'Recall', 'See the meaning, produce the word'],
+  ['cloze', 'Fill the gap', 'Complete the original sentence'], ['listen', 'Listen', 'Hear the word, recall it']];
 function startReview(all) {
   const t = S.settings.target, now = Date.now();
   RV.queue = Object.entries(dict(t)).filter(([, e]) => e.s >= 1 && e.s <= 3 && (all || (e.due || 0) <= now))
     .sort((a, b) => (a[1].due || 0) - (b[1].due || 0)).slice(0, 30).map(([k]) => k);
   RV.shown = false; RV.done = 0; RV.active = RV.queue.length > 0;
 }
+const wordRe = k => new RegExp('(^|[^\\p{L}])(' + reEsc(esc(k)) + ')(?![\\p{L}])', 'giu');
 function vReview() {
   const t = S.settings.target, c = counts(t);
   if (!RV.active || !RV.queue.length) {
     const finished = RV.active; RV.active = false;
-    return `<div class="top"><h1>Review</h1></div><div class="card empty">
-      ${finished ? `<p><b>Session complete</b> — ${RV.done} card${RV.done === 1 ? '' : 's'} reviewed.</p>` : ''}
-      <p>${c.due ? `${c.due} word${c.due === 1 ? ' is' : 's are'} due for review.` : c.learning ? 'Nothing is due right now. Reading more is the best review.' : 'Words you tap while reading show up here for review.'}</p>
+    return `<div class="top"><h1 class="grow">Flashcards</h1><button class="btn" data-a="go" data-v="words">All words</button></div>
+    ${finished ? `<div class="banner"><b>Session complete</b> — ${RV.done} card${RV.done === 1 ? '' : 's'} reviewed.</div>` : ''}
+    <div class="modes">${MODES.map(([v, n, d]) => `<button data-a="mode" data-v="${v}" class="${RV.mode === v ? 'on' : ''}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>
+    <div class="card empty">
+      <p>${c.due ? `<b>${c.due}</b> of your ${c.cards} flashcards ${c.due === 1 ? 'is' : 'are'} due.` : c.cards ? `None of your ${c.cards} flashcards is due right now. Reading more is the best review.` : 'Tap a word while reading and it becomes a flashcard here, together with the sentence you found it in.'}</p>
       <div class="row" style="justify-content:center">${c.due ? '<button class="btn primary" data-a="review">Start review</button>' : ''}
-      ${c.learning ? '<button class="btn" data-a="review" data-all="1">Practise all learning words</button>' : ''}</div></div>`;
+      ${c.cards ? '<button class="btn" data-a="review" data-all="1">Practise all</button>' : ''}</div></div>`;
   }
-  const k = RV.queue[0], e = dict(t)[k];
-  const ctx = e.ctx ? esc(e.ctx).replace(new RegExp('(^|[^\\p{L}])(' + esc(k).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![\\p{L}])', 'giu'), '$1<b>$2</b>') : '';
-  return `<div class="top"><h1 class="grow">Review</h1><span class="pill">${RV.queue.length} left</span><button class="btn" data-a="endReview">End</button></div>
-  <div class="card flash"><div class="word" lang="${esc(t)}">${esc(k)}</div>
-    <div><button class="mini" data-a="sayCard" aria-label="Listen">🔊</button></div>
-    ${ctx ? `<div class="ctx" lang="${esc(t)}">${ctx}</div>` : ''}
-    ${RV.shown ? `<div class="mean">${esc(e.tr || '(no meaning saved)')}</div>` : ''}</div>
-  ${RV.shown ? `<div class="grade">
+  const k = RV.queue[0], e = dict(t)[k], shown = RV.shown;
+  const hasCtx = e.ctx && wordRe(k).test(esc(e.ctx)), mode = RV.mode === 'cloze' && !hasCtx ? 'meaning' : RV.mode;
+  const ctxFull = e.ctx ? `<div class="ctx" lang="${esc(t)}">${esc(e.ctx).replace(wordRe(k), '$1<b>$2</b>')}</div>` : '';
+  const ctxGap = hasCtx ? `<div class="ctx" lang="${esc(t)}">${esc(e.ctx).replace(wordRe(k), '$1<b>_____</b>')}</div>` : '';
+  const word = `<div class="word" lang="${esc(t)}">${esc(k)}</div>`, say = '<div><button class="mini" data-a="sayCard" aria-label="Listen">🔊</button></div>';
+  const mean = `<div class="mean">${esc(e.tr || '(no meaning saved)')}</div>`;
+  const body = {
+    meaning: word + say + ctxFull + (shown ? mean : ''),
+    recall: mean + (shown ? word + say + ctxFull : ''),
+    cloze: (shown ? ctxFull + say : ctxGap) + mean,
+    listen: say + (shown ? word + mean + ctxFull : '<div class="muted">Listen, then reveal.</div>')
+  }[mode];
+  return `<div class="top"><h1 class="grow">Flashcards</h1><span class="pill">${RV.queue.length} left</span><button class="btn" data-a="endReview">End</button></div>
+  <div class="card flash">${body}</div>
+  ${shown ? `<div class="grade">
       <button class="btn" data-a="grade" data-g="again">Again<small>forgot</small></button>
       <button class="btn" data-a="grade" data-g="hard">Hard<small>${fmtIvl(Math.max(1, (e.ivl || 1) * 1.2))}</small></button>
       <button class="btn" data-a="grade" data-g="good">Good<small>${fmtIvl(Math.max(2, (e.ivl || 1) * 2.5))}</small></button>
-      <button class="btn" data-a="grade" data-g="known">Known<small>stop reviewing</small></button></div>`
-    : '<button class="btn primary" data-a="reveal" style="width:100%">Show meaning</button>'}`;
+      <button class="btn" data-a="grade" data-g="known">Mastered<small>stop reviewing</small></button></div>`
+    : '<button class="btn primary" data-a="reveal" style="width:100%">Show answer</button>'}`;
 }
 const fmtIvl = d => d < 30 ? Math.round(d) + ' d' : Math.round(d / 30) + ' mo';
 function grade(g) {
   const t = S.settings.target, k = RV.queue.shift(), e = dict(t)[k]; if (!e) return;
-  const now = Date.now();
+  const now = Date.now(), was = isKnown(e.s);
   if (g === 'again') { e.s = 1; e.ivl = 1; e.due = now + 10 * 60e3; RV.queue.push(k); }
   else if (g === 'hard') { e.ivl = Math.max(1, (e.ivl || 1) * 1.2); e.due = now + e.ivl * DAY; }
   else if (g === 'good') { e.ivl = Math.max(2, (e.ivl || 1) * 2.5); e.due = now + e.ivl * DAY; e.s = Math.min(3, e.s + 1); }
-  else { e.s = 4; bump('known'); }
+  else e.s = 4;
+  if (isKnown(e.s) && !was) bump('known');
   if (g !== 'again') RV.done++;
   bump('reviews'); RV.shown = false; save(); render();
 }
 
-/* ---------------- words / stats / settings ---------------- */
-const ST_NAME = {1: 'New', 2: 'Seen', 3: 'Familiar', 4: 'Known', 5: 'Ignored'};
-const ST_COL = {1: 'var(--l1)', 2: 'var(--l2)', 3: 'var(--l3)', 4: 'var(--accent)', 5: 'var(--line)'};
+/* ---------------- words / progress / settings ---------------- */
+const ST_NAME = {1: 'New', 2: 'Familiar', 3: 'Known', 4: 'Mastered', 5: 'Ignored'};
+const ST_COL = {1: 'var(--g1)', 2: 'var(--g2)', 3: 'var(--g3)', 4: 'var(--accent)', 5: 'var(--line)'};
 function wordRows() {
   const t = S.settings.target, q = WF.q.trim().toLowerCase();
-  const rows = Object.entries(dict(t)).filter(([k, e]) =>
-    (WF.st === 'all' ? e.s !== 5 : WF.st === 'learning' ? e.s >= 1 && e.s <= 3 : e.s === +WF.st) &&
+  const rows = Object.entries(dict(t)).filter(([k, e]) => e.s &&
+    (WF.st === 'all' ? e.s !== 5 : WF.st === 'cards' ? e.s <= 3 : e.s === +WF.st) &&
     (!q || k.includes(q) || (e.tr || '').toLowerCase().includes(q)))
     .sort((a, b) => (b[1].added || 0) - (a[1].added || 0));
   return (rows.slice(0, 300).map(([k, e]) => `<div class="wl" data-a="wordRow" data-k="${esc(k)}"><i class="dot" style="background:${ST_COL[e.s]}"></i>
       <div class="grow"><b lang="${esc(t)}">${esc(k)}</b><div class="muted">${esc(e.tr || '')}</div></div><span class="pill">${ST_NAME[e.s]}</span></div>`).join('')
-    || '<div class="empty">No words here yet.</div>') + (rows.length > 300 ? `<div class="muted" style="padding:10px 0">Showing 300 of ${rows.length}. Use search to narrow down.</div>` : '');
+    || '<div class="empty">No words here yet.</div>') + (rows.length > 300 ? `<div class="muted" style="padding:10px 0">Showing 300 of ${num(rows.length)}. Use search to narrow down.</div>` : '');
 }
 function vWords() {
-  const opts = [['all', 'All'], ['learning', 'Learning'], ['1', 'New'], ['2', 'Seen'], ['3', 'Familiar'], ['4', 'Known'], ['5', 'Ignored']];
-  return `<div class="top"><h1 class="grow">Words</h1><button class="btn" data-a="csv">Export CSV</button></div>
-  <div class="row" style="margin-bottom:8px"><input id="w-q" placeholder="Search…" value="${esc(WF.q)}" style="flex:1;min-width:160px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card)">
-    <select id="w-st" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);min-height:44px">${opts.map(([v, n]) => `<option value="${v}" ${WF.st === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+  const opts = [['all', 'All'], ['cards', 'Flashcards'], ['1', 'New'], ['2', 'Familiar'], ['3', 'Known'], ['4', 'Mastered'], ['5', 'Ignored']];
+  return `<div class="top"><button class="btn" data-a="go" data-v="review">‹ Back</button><h1 class="grow">Words</h1><button class="btn" data-a="csv">Export CSV</button></div>
+  <div class="row" style="margin-bottom:8px"><input id="w-q" class="inp" placeholder="Search…" value="${esc(WF.q)}" style="flex:1;min-width:160px;margin:0">
+    <select id="w-st" class="inp" style="width:auto;margin:0">${opts.map(([v, n]) => `<option value="${v}" ${WF.st === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
   <div class="card" id="w-list" style="padding-top:4px;padding-bottom:4px">${wordRows()}</div>`;
 }
 function vStats() {
-  const t = S.settings.target, c = counts(t), days = S.stats.days;
-  let read = 0, listen = 0, reviews = 0;
-  for (const d of Object.values(days)) { read += d.read || 0; listen += d.listen || 0; reviews += d.reviews || 0; }
-  const cells = []; const d = new Date(); d.setDate(d.getDate() - 27);
+  const t = S.settings.target, c = counts(t), days = S.stats.days, tot = totals(), lv = level(tot.input);
+  const by = {1: 0, 2: 0, 3: 0, 4: 0}; for (const e of Object.values(dict(t))) if (by[e.s] != null) by[e.s]++;
+  const cells = [], d = new Date(); d.setDate(d.getDate() - 27);
   for (let i = 0; i < 28; i++, d.setDate(d.getDate() + 1)) cells.push(`<i class="${days[today(d)] ? 'a' : ''}" title="${today(d)}">${d.getDate()}</i>`);
-  const td = days[today()] || {};
+  const nr = tot.newW + tot.reinf || 1;
   return `<div class="top"><h1 class="grow">Progress</h1><span class="pill">${esc(langName(t))}</span></div>
+  <div class="card"><div class="row"><div class="grow"><div class="muted">Total input</div><b style="font-size:2rem">${num(tot.input)}</b> <span class="muted">words</span></div>
+      <div style="text-align:right"><div class="muted">Estimated level</div><b style="font-size:2rem">${lv.name}</b></div></div>
+    <div class="meter" style="margin:10px 0 6px"><i style="width:${lv.pct.toFixed(1)}%"></i></div>
+    <div class="muted">${num(tot.read)} read · ${num(tot.heard)} listened${lv.next ? ` · ${num(lv.left)} more words to ${lv.next}` : ''}. The level is a rough estimate from the input you have done in this app.</div></div>
   <div class="tiles">
-    <div class="tile"><b>${c.known}</b><span>known words</span></div>
-    <div class="tile"><b>${c.learning}</b><span>words being learned</span></div>
+    <div class="tile"><b>${num(c.known)}</b><span>known words</span></div>
+    <div class="tile"><b>${num(c.cards)}</b><span>flashcards</span></div>
     <div class="tile"><b>${streak()}</b><span>day streak</span></div>
-    <div class="tile"><b>${read}</b><span>words read</span></div>
-    <div class="tile"><b>${Math.round(listen / 60)}</b><span>minutes listened</span></div>
-    <div class="tile"><b>${reviews}</b><span>cards reviewed</span></div>
+    <div class="tile"><b>${Math.round(tot.listen / 60)}</b><span>minutes listened</span></div>
+    <div class="tile"><b>${num(tot.reviews)}</b><span>cards reviewed</span></div>
   </div>
-  <div class="card"><h2>Today</h2><div class="muted">${td.saved || 0} of ${S.settings.goal} new words saved · ${td.known || 0} words learned · ${td.read || 0} words read · ${Math.round((td.listen || 0) / 60)} min listened</div>
-    <progress max="${S.settings.goal}" value="${Math.min(td.saved || 0, S.settings.goal)}" style="margin-top:10px"></progress></div>
-  <div class="card"><h2>Last 4 weeks</h2><div class="days">${cells.join('')}</div></div>
+  <div class="card"><h2>New vs reinforced words</h2>
+    <div class="split"><i style="width:${100 * tot.newW / nr}%;background:var(--new)"></i><i style="width:${100 * tot.reinf / nr}%;background:var(--accent)"></i></div>
+    <div class="muted">${num(tot.newW)} words met for the first time · ${num(tot.reinf)} met again in a new text</div></div>
+  <div class="card"><h2>Word familiarity</h2>
+    <div class="split">${[1, 2, 3, 4].map(s => `<i style="flex:${by[s]};background:${ST_COL[s]}"></i>`).join('')}</div>
+    <div class="muted">${[1, 2, 3, 4].map(s => `${num(by[s])} ${ST_NAME[s].toLowerCase()}`).join(' · ')}</div></div>
+  <div class="card"><h2>Activity — last 4 weeks</h2><div class="days">${cells.join('')}</div></div>
   <div class="card"><h2>How to learn with Storyglot</h2><ol class="muted" style="margin:0;padding-left:20px">
     <li>Pick texts you find interesting, slightly above your level (roughly 5–20% new words).</li>
-    <li>Listen while you read. Replay sentences, slow the voice down, loop hard ones.</li>
-    <li>Tap words you don't know. They turn yellow and fade as you get to know them.</li>
-    <li>Finish the lesson — everything you didn't tap counts as known. Watch your known-word count grow.</li>
-    <li>Don't try to memorise. Review a little, then read and listen more: words stick by meeting them again in new contexts.</li></ol></div>`;
+    <li>Listen while you read. Replay sentences, slow the voice down, loop the hard ones.</li>
+    <li>Tap words you don't know. They turn green, become flashcards and fade as you get to know them.</li>
+    <li>Mark the text as read: its words are added to your input, and the ones you did not tap count as known.</li>
+    <li>Don't try to memorise. Volume matters most — aim for a number of words a day, review a little, then read and listen more.</li></ol></div>`;
 }
 function vSettings() {
   const s = S.settings, vs = voicesFor(s.target);
@@ -692,7 +843,9 @@ function vSettings() {
   <div class="card"><h2>Languages</h2>
     <label class="f">I speak<select id="s-native">${langOptions(s.native)}</select></label>
     <label class="f">I am learning<select id="s-target">${langOptions(s.target)}</select></label>
-    <label class="f">Daily goal (new words saved)<input id="s-goal" type="number" min="1" max="200" value="${s.goal}"></label></div>
+    <label class="f">Daily goal (words read + listened)<input id="s-goal" type="number" min="50" max="50000" step="50" value="${s.goal}"></label>
+    <label class="chk"><input type="checkbox" id="s-auto" ${s.autoKnown ? 'checked' : ''}><span>When I mark a text as read, count the words I did not tap as known</span></label>
+    <label class="f">Appearance<select id="s-theme">${[['auto', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([v, n]) => `<option value="${v}" ${s.theme === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
   <div class="card"><h2>Voice</h2>
     ${!TTS ? '<p class="muted">This browser does not support text-to-speech.</p>' : `
     <label class="f">${esc(langName(s.target))} voice<select id="s-voice"><option value="">Automatic</option>${vs.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI === s.voice ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})${v.localService ? ' · offline' : ''}</option>`).join('')}</select></label>
@@ -707,7 +860,7 @@ function vSettings() {
     ${s.provider === 'libre' ? `<label class="f">Server address<input id="s-lturl" placeholder="https://…" value="${esc(s.ltUrl)}"></label>
       <label class="f">API key (if required)<input id="s-ltkey" value="${esc(s.ltKey)}" autocomplete="off"></label>`
     : `<label class="f">Email for MyMemory (optional)<input id="s-email" type="email" value="${esc(s.email)}" placeholder="raises the free limit from ~5,000 to ~50,000 characters a day"></label>
-      <p class="muted" style="margin:0">Text you translate is sent to mymemory.translated.net${s.email ? ' together with this email address' : ''}. Reading, audio, word tracking and review work offline.</p>`}</div>
+      <p class="muted" style="margin:0">Text you translate is sent to mymemory.translated.net${s.email ? ' together with this email address' : ''}. Reading, audio, word tracking and flashcards work offline.</p>`}</div>
   <div class="card"><h2>Your data</h2><p class="muted" style="margin-top:0">Everything is stored only on this device, in this browser.</p>
     <div class="row"><button class="btn" data-a="backup">Export backup</button>
       <label class="btn" style="display:inline-flex;align-items:center">Import backup<input type="file" id="s-import" accept=".json,application/json" hidden></label>
@@ -717,13 +870,15 @@ function download(name, text, type) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+const refreshWords = () => { const el = $('#w-list'); if (el) el.innerHTML = wordRows(); };
 
 /* ---------------- events ---------------- */
 const ACT = {
   go: el => go(el.dataset.v),
-  start() { const n = $('#w-native').value, t = $('#w-target').value; if (n === t) return toast('Choose two different languages.'); S.settings.native = n; S.settings.target = t; saveNow(); navigator.storage?.persist?.().catch(() => {}); go('library'); },
+  start() { const n = $('#w-native').value, t = $('#w-target').value; if (n === t) return toast('Choose two different languages.'); S.settings.native = n; S.settings.target = t; saveNow(); navigator.storage?.persist?.().catch(() => {}); go('home'); },
   open: el => openLesson(el.dataset.id),
-  delLesson(el) { const L = S.lessons.find(l => l.id === el.dataset.id); if (L && confirm(`Delete “${L.title}”? Your saved words are kept.`)) { S.lessons = S.lessons.filter(l => l !== L); saveNow(); render(); } },
+  delLesson(el) { const L = S.lessons.find(l => l.id === el.dataset.id); if (L && confirm(`Delete “${L.title}”? Your words and statistics are kept.`)) { S.lessons = S.lessons.filter(l => l !== L); saveNow(); render(); } },
+  libFilter(el) { LF.show = el.dataset.v; render(); },
   addMode(el) { A.title = $('#a-title').value; A.text = $('#a-text').value; A.native = !!el.dataset.n; render(); },
   create: createLesson,
   cancelCreate() { A.abort = true; },
@@ -739,24 +894,26 @@ const ACT = {
   async trAll() { const L = cur(), idx = L.sents.map((s, i) => s.tr ? -1 : i).filter(i => i >= 0); try { await pool(idx, 3, async i => { const s = L.sents[i]; s.tr = await translate(s.t, L.lang, S.settings.native); const el = $('.tr[data-i="' + i + '"]'); if (el) el.textContent = s.tr; }); } catch (e) { toast(e.message); } saveNow(); if (view === 'reader' && cur() === L) { const y = scrollY; render(); scrollTo(0, y); } },
   closeSheet,
   sayWord() { if (!R.sel) return; if (P.playing) { stopSpeech(); drawPlayer(); } speak(R.sel.surface, R.sel.lang, {rate: Math.min(S.settings.rate, 0.9)}); },
-  setSt(el) { if (!R.sel) return; setStatus(R.sel.lang, R.sel.k, +el.dataset.s); drawSheet(); if (view === 'words') { $('#w-list').innerHTML = wordRows(); } },
+  setSt(el) { const sel = R.sel; if (!sel) return; setStatus(sel.lang, sel.k, +el.dataset.s, {tr: ($('#s-mean') || {}).value || sel.tr, ctx: sel.ctx}); drawSheet(); refreshWords(); },
+  mode(el) { RV.mode = el.dataset.v; render(); },
   review(el) { startReview(!!el.dataset.all); render(); },
   endReview() { RV.active = false; RV.queue = []; render(); },
   reveal() { RV.shown = true; render(); },
   sayCard() { speak(RV.queue[0], S.settings.target, {rate: Math.min(S.settings.rate, 0.9)}); },
   grade: el => grade(el.dataset.g),
-  wordRow(el) { const k = el.dataset.k; R.sel = {lang: S.settings.target, k, surface: k, i: null, busy: false, err: ''}; drawSheet(); },
+  wordRow(el) { const k = el.dataset.k; R.sel = {lang: S.settings.target, k, surface: k, i: null, tr: '', busy: false, err: ''}; drawSheet(); },
   csv() { const q = s => '"' + String(s || '').replace(/"/g, '""') + '"'; const t = S.settings.target;
     const rows = Object.entries(dict(t)).filter(([, e]) => e.s >= 1 && e.s <= 3).map(([k, e]) => [k, e.tr, e.ctx].map(q).join(','));
-    if (!rows.length) return toast('No learning words to export yet.');
+    if (!rows.length) return toast('No flashcards to export yet.');
     download(`storyglot-${t}-words.csv`, '﻿' + rows.join('\r\n'), 'text/csv'); },
   testVoice() { const t = S.settings.target; const L = S.lessons.find(l => l.lang === t); speak(L ? L.sents[0].t : langName(t), t); },
   backup() { saveNow(); download(`storyglot-backup-${today()}.json`, JSON.stringify(S), 'application/json'); },
-  reset() { if (confirm('Erase all lessons, words and progress on this device? This cannot be undone.')) { S = DEFAULTS(); saveNow(); go('welcome'); } }
+  reset() { if (confirm('Erase all lessons, words and progress on this device? This cannot be undone.')) { S = DEFAULTS(); saveNow(); applyTheme(); go('welcome'); } }
 };
 document.addEventListener('click', e => {
   const w = e.target.closest('.w');
   if (w && view === 'reader') {
+    const sl = getSelection(); if (sl && !sl.isCollapsed) return;          // finishing a phrase selection, not a tap
     const L = cur(), s = w.closest('.s');
     document.querySelectorAll('.w.sel').forEach(x => x.classList.remove('sel')); w.classList.add('sel');
     openWord(L.lang, w.dataset.k, w.textContent, s ? +s.dataset.i : null);
@@ -772,31 +929,37 @@ document.addEventListener('change', e => {
     case 'p-rate': s.rate = +t.value; save(); if (P.playing) playFrom(P.i); break;
     case 's-native': if (t.value === s.target) { toast('Choose two different languages.'); render(); break; } s.native = t.value; saveNow(); break;
     case 's-target': if (t.value === s.native) { toast('Choose two different languages.'); render(); break; } s.target = t.value; s.voice = ''; RV.active = false; saveNow(); render(); break;
-    case 's-goal': s.goal = Math.max(1, Math.min(200, Math.round(+t.value) || 10)); save(); break;
+    case 's-goal': s.goal = Math.max(50, Math.min(50000, Math.round(+t.value) || 1000)); save(); break;
+    case 's-auto': s.autoKnown = t.checked; save(); break;
+    case 's-theme': s.theme = t.value; save(); applyTheme(); break;
     case 's-voice': s.voice = t.value; save(); break;
     case 's-rate': s.rate = +t.value; save(); break;
     case 's-prov': s.provider = t.value; saveNow(); render(); break;
     case 's-email': s.email = t.value.trim(); save(); break;
     case 's-lturl': s.ltUrl = t.value.trim(); save(); break;
     case 's-ltkey': s.ltKey = t.value.trim(); save(); break;
-    case 'w-st': WF.st = t.value; $('#w-list').innerHTML = wordRows(); break;
-    case 's-mean': if (R.sel) { const e2 = dict(R.sel.lang)[R.sel.k]; if (e2) { e2.tr = t.value.trim(); save(); if (view === 'words') $('#w-list').innerHTML = wordRows(); } } break;
-    case 'a-file': { const f = t.files[0]; if (!f) break; f.text().then(txt => { A.text = txt; A.title = $('#a-title').value || f.name.replace(/\.[^.]+$/, ''); render(); }); break; }
+    case 'w-st': WF.st = t.value; refreshWords(); break;
+    case 's-mean': if (R.sel) { const e2 = dict(R.sel.lang)[R.sel.k]; if (e2 && e2.added) { e2.tr = t.value.trim(); save(); refreshWords(); } else R.sel.tr = t.value.trim(); } break;
+    case 'a-file': { const f = t.files[0]; if (!f) break;
+      const name = f.name.replace(/\.[^.]+$/, ''), keep = $('#a-title').value, epub = /\.epub$/i.test(f.name);
+      (epub ? f.arrayBuffer().then(readEpub) : f.text().then(text => ({title: '', text})))
+        .then(b => { A.text = b.text; A.title = keep || b.title || name; if (epub) A.native = false; if (view === 'add') render(); })
+        .catch(err => toast('Could not open that file: ' + err.message));
+      break; }
     case 's-import': { const f = t.files[0]; if (!f) break; f.text().then(txt => {
       try { const d = JSON.parse(txt); if (!d || !d.settings || !Array.isArray(d.lessons)) throw 0;
         if (!confirm('Replace everything on this device with this backup?')) return;
-        const def = DEFAULTS(); S = {...def, ...d, settings: {...def.settings, ...d.settings}, stats: {days: {}, ...d.stats}}; saveNow(); go('library'); toast('Backup restored.');
+        S = merge(d); saveNow(); applyTheme(); go('home'); toast('Backup restored.');
       } catch (err) { toast('That file is not a Storyglot backup.'); } }); break; }
   }
 });
 document.addEventListener('input', e => {
-  if (e.target.id === 'w-q') { WF.q = e.target.value; $('#w-list').innerHTML = wordRows(); }
+  if (e.target.id === 'w-q') { WF.q = e.target.value; refreshWords(); }
   if (e.target.id === 's-rate') $('#s-rate-v').textContent = (+e.target.value).toFixed(2).replace(/0$/, '') + '×';
 });
 
 /* ---------------- boot ---------------- */
-load();
-render();
+load().then(() => { applyTheme(); render(); });
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>

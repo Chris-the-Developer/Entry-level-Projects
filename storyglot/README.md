@@ -7,19 +7,28 @@ narration and tap the words you don't know.
 
 ## What it does
 
+- **Home**: today's input against your daily word goal, total words of input, known words, an
+  estimated level, your streak, and the text to continue with.
 - **Add a text** in your own language (it is translated sentence by sentence into the language you
-  are learning) or paste a text that is already in that language. `.txt` files can be opened too.
-- **Read with colour-coded words**: blue = new, yellow = learning (fades in three steps), plain = known.
-  Tap a word to see its meaning, hear it, edit the meaning and set how well you know it.
-- **Narration**: sentence-by-sentence voiceover with highlighting, previous/next, loop a sentence,
-  speed from 0.5× to 1.5×. Uses the voices installed on your device, so it works offline.
-- **Translation view**: every sentence with its translation underneath.
-- **Finish lesson**: every word you did not tap is counted as known — your known-word count is the
-  main progress number.
-- **Review**: spaced-repetition flashcards for the words you tapped, shown in their original sentence.
-- **Progress**: known words, words read, minutes listened, daily goal and streak.
+  are learning) or paste one that is already in that language. `.txt` and `.epub` files can be
+  opened; long texts and books are split into chapters.
+- **Read with colour-coded words**: blue = new, green = in your flashcards (fading as it moves from
+  New to Familiar to Known), plain = mastered. Tap a word for an instant translation — it is added
+  to your flashcards with the sentence you found it in. Select several words to save a phrase.
+- **Narration**: sentence-by-sentence voiceover with word highlighting, previous/next, loop a
+  sentence, speed from 0.5× to 1.5×. Uses the voices installed on your device, so it works offline.
+- **Sentences view**: every sentence with its translation underneath.
+- **Mark as read**: the text's words are added to your total input, split into words met for the
+  first time and words reinforced. Words you did not tap count as known (can be switched off).
+- **Flashcards**: spaced repetition, always in context, with four study modes — recognise, recall,
+  fill the gap in the original sentence, and listen.
+- **Progress**: total input (read + listened), estimated level, new vs reinforced words, word
+  familiarity breakdown, activity calendar and streak.
 - **Words**: searchable vocabulary list, CSV export (for Anki etc.), full backup export/import.
-- 33 languages, including Chinese, Japanese and Thai (words are segmented by the browser).
+- Light and dark theme, 33 languages including Chinese, Japanese and Thai.
+
+Not included, because they need a paid AI service or a server: AI-generated stories, an AI
+conversation tutor, and automatic podcast/video transcripts.
 
 ## Put it on your tablet
 
