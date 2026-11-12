@@ -196,7 +196,7 @@ const num = n => Math.round(n).toLocaleString();
 
 /* ---------------- Android app: native voice, network and files through Capacitor ---------------- */
 const CAP = self.Capacitor && self.capacitorExports && self.Capacitor.isNativePlatform && self.Capacitor.isNativePlatform() ? self.capacitorExports : null;
-const NAT = CAP ? {http: CAP.CapacitorHttp, tts: CAP.registerPlugin('TextToSpeech'), fs: CAP.registerPlugin('Filesystem'), app: CAP.registerPlugin('App')} : null;
+const NAT = CAP ? {http: CAP.CapacitorHttp, tts: CAP.registerPlugin('TextToSpeech'), fs: CAP.registerPlugin('Filesystem'), app: CAP.registerPlugin('App'), wake: CAP.registerPlugin('KeepAwake')} : null;
 function b64Blob(b64, type) { const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new Blob([u8], {type}); }
 // fetch() for other sites. In the app the request is made by Android itself, so browser cross-origin rules do not apply.
 async function xfetch(url, opt = {}, type = 'text') {
@@ -210,6 +210,14 @@ async function xfetch(url, opt = {}, type = 'text') {
     json: async () => typeof d === 'string' ? JSON.parse(d) : d,
     text: async () => typeof d === 'string' ? d : JSON.stringify(d),
     blob: async () => b64Blob(String(d), 'audio/mpeg')};
+}
+let wakeLock = null, awakeOn = false;
+function awake(on) {                                      // keep the screen on while audio plays, so narration is not cut off by the screen timeout
+  if (on === awakeOn) return; awakeOn = on;
+  if (NAT) { (on ? NAT.wake.keepAwake() : NAT.wake.allowSleep()).catch(() => {}); return; }
+  if (!navigator.wakeLock) return;
+  if (on) navigator.wakeLock.request('screen').then(l => { wakeLock = l; if (!awakeOn) { l.release().catch(() => {}); wakeLock = null; } }).catch(() => { awakeOn = false; });
+  else if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
 }
 async function natWrite(path, data) {                     // shared Documents folder; the app's own folder if that is refused
   try { await NAT.fs.writeFile({path, data, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true}); return 'Documents/' + path; }
@@ -547,6 +555,7 @@ async function azFetch(text, lang) {
 }
 function haltAudio() { if (NAT) NAT.tts.stop().catch(() => {}); else if (TTS) speechSynthesis.cancel(); AUD.onended = AUD.onerror = null; AUD.pause(); }
 function natSpeak(my, text, lang, o, retried) {          // Android's own text-to-speech engine (Samsung, Google, …)
+  if (!voices.length) loadVoices();                       // the engine may not have been ready at start-up
   const v = voicesFor(lang).find(x => x.voiceURI === S.settings.voice);
   natRange = e => { if (my === P.tok && o.onboundary) o.onboundary({charIndex: e.start}); };
   NAT.tts.speak({text, lang: v ? v.lang : langLocale(lang), rate: o.rate || S.settings.rate, pitch: 1, volume: 1, queueStrategy: 0, ...(v ? {voice: v.idx} : {})})
@@ -780,7 +789,7 @@ function render() {
   $('#player').hidden = view !== 'reader';
   m.innerHTML = (memOnly ? '<div class="banner">Storage is not available in this browser mode, so progress will be lost when you close the page. Open the app from a web address (see README) or export a backup in Settings.</div>' : '') +
     ({login: vLogin, welcome: vWelcome, home: vHome, library: vLibrary, add: vAdd, reader: vReader, story: vStory, tutor: vTutor, review: vReview, words: vWords, stats: vStats, settings: vSettings}[view])();
-  drawTabs(); syncVideo();
+  drawTabs(); syncVideo(); awake(view === 'reader' && P.playing);
   if (view === 'reader') { drawPlayer(); applyFont(); }
   if (view === 'review' && RV.active && RV.mode === 'listen' && !RV.shown && RV.queue.length) speak(RV.queue[0], S.settings.target, {rate: Math.min(S.settings.rate, 0.9)});
 }
@@ -900,6 +909,7 @@ function vReader() {
 }
 function applyFont() { const t = $('#text'); if (t) t.style.fontSize = S.settings.font + 'px'; }
 function drawPlayer() {
+  awake(view === 'reader' && P.playing);
   const el = $('#player'); if (view !== 'reader') return;
   const L = cur(); if (!L) return;
   if (!TTS && !useAzure() && !videoMode(L)) { el.innerHTML = '<span class="muted">This browser does not support text-to-speech.</span>'; return; }
